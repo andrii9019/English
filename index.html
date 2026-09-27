@@ -125,7 +125,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><img class="logo" src="logo-96.png" alt="">Відлуння <span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v12</span></h1>
+    <h1 class="brand"><img class="logo" src="logo-96.png" alt="">Відлуння <span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v13</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -155,6 +155,8 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div id="packRows"></div>
       <div class="setting"><span>Голос українською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Прослухати">▶</button></span></div>
       <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
+      <div class="setting"><span>Англійська вимова</span>
+        <select id="setAccent"><option value="en-US">Американська</option><option value="en-GB">Британська</option></select></div>
       <div class="setting"><span>Швидкість мовлення</span>
         <select id="setRate"><option value="0.9">Повільніше</option><option value="1">Звичайна</option><option value="1.1">Швидше</option></select></div>
       <div class="setting"><span>Озвучувати пояснення</span>
@@ -404,6 +406,7 @@ const hasTTS = 'speechSynthesis' in window;
 let voices = [];
 function loadVoices(){ if (hasTTS) voices = speechSynthesis.getVoices(); }
 loadVoices(); if (hasTTS) speechSynthesis.onvoiceschanged = () => { loadVoices(); if (!$('view-start').hidden) renderStart(); };
+function EN(){ return (db.settings && db.settings.accent) || 'en-US'; }
 function voicesFor(lang){
   const p = lang.slice(0,2).toLowerCase();
   return voices.filter(v => v.lang.toLowerCase().replace('_','-').startsWith(p));
@@ -413,7 +416,7 @@ function voiceScore(v, lang){
   if (/natural|neural|enhanced|premium|wavenet|online/.test(n)) sc += 5;
   if (/google/.test(n)) sc += 3;
   if (!v.localService) sc += 2;             // network voices usually sound more natural
-  if (v.lang.replace('_','-') === lang) sc += 2;
+  if (v.lang.replace('_','-') === lang) sc += 4;
   if (/compact|espeak/.test(n)) sc -= 5;
   return sc;
 }
@@ -445,7 +448,7 @@ function listen(timeoutMs = 9000){
     if (!SR) return reject('unsupported');
     stopListening();
     const r = new SR(); rec = r;
-    r.lang = 'en-US'; r.maxAlternatives = 5; r.interimResults = true; r.continuous = false;
+    r.lang = EN(); r.maxAlternatives = 5; r.interimResults = true; r.continuous = false;
     let finals = null, interim = '', err = null, gotAudio = false, settled = false;
     const hook = (t, x) => { try { listenHook && listenHook(t, x); } catch(e){} };
     const finish = (ok, val) => {
@@ -491,13 +494,46 @@ function norm(s){
   return s.toLowerCase().replace(/[’`]/g,"'").replace(/[^a-z' ]+/g,' ')
     .replace(/\b(to|a|an|the)\b/g,' ').replace(/\s+/g,' ').trim();
 }
-function isCorrect(heard, word){
+function exactMatch(heard, word){
   const variants = word.en.map(norm).filter(Boolean);
   return heard.some(h => {
     const n = ' ' + norm(h) + ' ';
     return variants.some(v => n.trim() === v || n.includes(' ' + v + ' '));
   });
 }
+function lev(a, b){
+  if (a === b) return 0;
+  const m = a.length, n = b.length; if (!m || !n) return m || n;
+  let prev = Array.from({length: n + 1}, (_, j) => j);
+  for (let i = 1; i <= m; i++){
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+const stem = t => t.length > 4 ? t.replace(/ies$/,'y').replace(/(ing|ed|es|s)$/,'') : t;
+const stemAll = t => t.split(' ').map(stem).join(' ');
+// forgives what the recogniser typically gets wrong: split/joined words, endings, one or two letters
+function fuzzyMatch(heard, word){
+  const variants = word.en.map(norm).filter(Boolean);
+  return heard.some(h => {
+    const words = norm(h).split(' ').filter(Boolean);
+    return variants.some(v => {
+      const vc = v.replace(/ /g,''), vs = stemAll(v), k = v.split(' ').length;
+      const tol = vc.length >= 9 ? 2 : vc.length >= 5 ? 1 : 0;
+      for (let size = Math.max(1, k - 1); size <= k + 1; size++){
+        for (let i = 0; i + size <= words.length; i++){
+          const win = words.slice(i, i + size).join(' ');
+          if (win.replace(/ /g,'') === vc || stemAll(win) === vs) return true;
+          if (tol && lev(win.replace(/ /g,''), vc) <= tol) return true;
+        }
+      }
+      return false;
+    });
+  });
+}
+function isCorrect(heard, word){ return exactMatch(heard, word) || fuzzyMatch(heard, word); }
 const COMMANDS = {
   repeat: ['repeat','repeat please','again','one more time','say again','say it again','what','sorry','pardon'],
   dunno:  ["i don't know","don't know","i dont know","dont know","no idea","i have no idea","skip","pass","next","i forgot","forgot"],
@@ -540,6 +576,16 @@ function startSession(){
 function current(){ const it = session.queue[session.i]; return { it, w: db.words.find(x => x.id === it.id) }; }
 function alive(step){ return session && step === session.step && !session.paused; }
 function wordPrompt(w){ return w.uk + (db.settings.hints && w.hint ? '. ' + w.hint : ''); }
+// turn list-like notes into speech-friendly text: "позичати (у когось)" -> "позичати, у когось"
+function speakable(t){
+  return t.replace(/\s*\(\s*/g, ', ').replace(/\s*\)\s*/g, ' ').replace(/\s*\/\s*/g, ' або ')
+    .replace(/\s*;\s*/g, ', ').replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
+}
+async function sayWord(w, prefix = ''){
+  if (prefix) { await speak(prefix, 'uk-UA'); await wait(150); }
+  await speak(speakable(w.uk), 'uk-UA');
+  if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), 'uk-UA'); }
+}
 
 async function presentItem(){
   if (!session) return;
@@ -559,7 +605,7 @@ async function presentItem(){
   if (it.phase === 'retry') session.firstRetry = false;
   if (lead) await speak(lead, 'uk-UA');
   if (!alive(step)) return;
-  await speak(wordPrompt(w), 'uk-UA');
+  await sayWord(w);
   if (!alive(step)) return;
   if (session.tapMode) setStatus('Натисніть мікрофон і скажіть переклад');
   else listenLoop(step);
@@ -600,7 +646,7 @@ async function listenLoop(step){
         if (++silent < 3) continue;
         silent = 0;
         if (++reprompts >= 2){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
-        await speak('Повторю. ' + wordPrompt(w), 'uk-UA');
+        await sayWord(w, 'Повторю.');
         continue;
       }
       const msg = {
@@ -614,7 +660,7 @@ async function listenLoop(step){
     if (!mine()) return;
     if (isCorrect(heard, w) || synonymHit(heard, w)) return handleAnswer(heard, heard[0]);
     const cmd = command(heard);
-    if (cmd === 'repeat'){ await speak(wordPrompt(w), 'uk-UA'); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
+    if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
     if (cmd === 'stop'){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
     return handleAnswer(heard, heard[0]);
@@ -638,6 +684,8 @@ function resumeSession(){
 function grade(w, ok, phase){
   if (phase === 'retry' || session.graded[w.id]) return;
   session.graded[w.id] = true;
+  session.prev = session.prev || {};
+  session.prev[w.id] = { box: w.box, seen: w.seen, due: w.due, weak: w.weak, right: w.right, wrong: w.wrong };
   if (ok){
     // a new word answered correctly on first sight is already known: next check in 14 days
     w.box = w.seen ? Math.min(w.box + 1, INTERVALS.length - 1) : KNOWN_ON_FIRST_SIGHT;
@@ -651,6 +699,17 @@ function grade(w, ok, phase){
   save();
 }
 
+// the recogniser misheard: undo the mistake and count the answer as correct
+function overrule(s, w){
+  if (!s || !s.mistakes.includes(w.id) || !s.prev || !s.prev[w.id]) return false;
+  Object.assign(w, s.prev[w.id]);
+  s.mistakes = s.mistakes.filter(id => id !== w.id);
+  w.box = w.seen ? Math.min(w.box + 1, INTERVALS.length - 1) : KNOWN_ON_FIRST_SIGHT;
+  w.weak = false; w.right++; s.right++; w.seen = true;
+  w.due = Date.now() + INTERVALS[w.box] * DAY;
+  if (s.queue){ const at = s.queue.findIndex((q, i) => i > s.i && q.id === w.id && q.phase === 'retry'); if (at > -1) s.queue.splice(at, 1); }
+  save(); return true;
+}
 async function handleAnswer(heard, shown){
   if (!session || session.locked) return;
   session.locked = true; stopListening(); if (hasTTS) speechSynthesis.cancel();
@@ -667,14 +726,16 @@ async function handleAnswer(heard, shown){
   fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
   fb.innerHTML = `<strong>${syn ? 'Теж підходить' : ok ? 'Правильно' : (heard ? 'Не зовсім' : 'Правильна відповідь')}</strong>` +
     `<span>${esc(w.en.join(', '))}</span>` +
-    (shown && !ok ? `<div class="small muted">Почув: «${esc(shown)}»</div>` : '');
+    (shown && !ok ? `<div class="small muted">Почув: «${esc(shown)}»</div><button class="btn" id="overBtn" style="margin-top:8px">Я сказав правильно</button>` : '');
+  const ob = $('overBtn');
+  if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Зараховано</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Зараховано як правильну відповідь'); } };
   $('dunnoBtn').hidden = true;
 
   if (syn){
     setStatus('');
     session.streak = (session.streak || 0) + 1;
     await speak('Теж підходить! Але тут я мав на увазі:', 'uk-UA');
-    if (alive(step)) await speak(w.en[0], 'en-US');
+    if (alive(step)) await speak(w.en[0], EN());
   } else if (ok){
     setStatus('');
     session.streak = (session.streak || 0) + 1;
@@ -683,14 +744,14 @@ async function handleAnswer(heard, shown){
     const others = w.en.filter(v => v !== said).slice(0, 2);
     if (it.phase === 'new' && others.length && alive(step)){
       await speak('Також можна:', 'uk-UA');
-      if (alive(step)) await speak(others.join(', '), 'en-US');
+      if (alive(step)) await speak(others.join(', '), EN());
     }
   } else {
     setStatus('Повторіть правильний варіант уголос');
     session.streak = 0;
     await speak(pick(heard ? WRONG : DUNNO), 'uk-UA');
     if (!alive(step)) return;
-    await speak(w.en[0], 'en-US');
+    await speak(w.en[0], EN());
     if (!alive(step)) return;
     await speak(pick(['Повторіть, будь ласка.', 'Скажіть це ще раз.', 'Спробуйте вимовити.']), 'uk-UA');
     if (alive(step) && SR && !session.tapMode){
@@ -706,6 +767,19 @@ async function handleAnswer(heard, shown){
 }
 function pickHeardVariant(heard, w){ return w.en.find(v => isCorrect(heard, {en:[v]})) || ''; }
 
+let lastSession = null;
+function renderSummaryList(){
+  const s = lastSession; if (!s) return;
+  const total = Object.keys(s.graded).length;
+  $('sumText').textContent = `Правильно з першої спроби: ${s.right} з ${total}.` + (s.mistakes.length ? ' Ці слова з\'являться першими в наступному повторенні. Якщо додаток вас не так почув — натисніть ✓.' : '');
+  $('sumList').innerHTML = s.mistakes.map(id => { const w = db.words.find(x=>x.id===id);
+    return w ? `<li style="display:flex;align-items:center;gap:8px"><span style="flex:1"><b>${esc(w.uk)}</b> — ${esc(w.en.join(', '))}</span><button class="icon-btn" data-ok="${w.id}" aria-label="Я сказав правильно" title="Я сказав правильно">✓</button></li>` : ''; }).join('');
+}
+$('sumList').onclick = e => {
+  const id = e.target.dataset.ok; if (!id || !lastSession) return;
+  const w = db.words.find(x => x.id === id);
+  if (w && overrule(lastSession, w)){ renderSummaryList(); toast('Зараховано'); }
+};
 function endSession(){ stopListening(); if (hasTTS) speechSynthesis.cancel(); releaseAwake(); session = null; }
 function finishSession(){
   const s = session; endSession();
@@ -714,8 +788,8 @@ function finishSession(){
   $('sumTitle').textContent = s.mistakes.length ? 'Сесію завершено' : 'Без жодної помилки';
   $('sumText').textContent = `Правильно з першої спроби: ${s.right} з ${total}.` +
     (s.mistakes.length ? ' Ці слова з\'являться першими в наступному повторенні:' : '');
-  $('sumList').innerHTML = s.mistakes.map(id => { const w = db.words.find(x=>x.id===id);
-    return w ? `<li><b>${esc(w.uk)}</b> — ${esc(w.en.join(', '))}</li>` : ''; }).join('');
+  lastSession = s;
+  renderSummaryList();
   show('summary');
   const pct = total ? s.right / total : 0;
   const mood = pct >= 0.9 ? 'Блискуче!' : pct >= 0.7 ? 'Гарна робота!' : pct >= 0.5 ? 'Непогано!' : 'Головне — регулярність.';
@@ -726,7 +800,7 @@ $('startBtn').onclick = startSession;
 $('soundTest').onclick = async () => {
   const out = $('micTestOut');
   loadVoices();
-  const uk = pickVoice('uk-UA'), en = pickVoice('en-US');
+  const uk = pickVoice('uk-UA'), en = pickVoice(EN());
   const lines = [
     'Адреса: ' + location.href,
     'Захищене з\'єднання (https): ' + (window.isSecureContext ? 'так' : 'НІ — голос не працюватиме'),
@@ -785,7 +859,7 @@ $('repeatBtn').onclick = async () => {
   if (!session || session.locked) return;
   const step = session.step; stopListening(); session.paused = true;
   const { w } = current();
-  await speak(wordPrompt(w), 'uk-UA');
+  await sayWord(w);
   if (session && session.step === step){ session.paused = false; listenLoop(step); }
 };
 $('dunnoBtn').onclick = () => { if (session){ session.paused = false; handleAnswer(null, ''); } };
@@ -820,7 +894,8 @@ function renderStart(){
   $('setNew').value = String(db.settings.newPer);
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
-  [['voiceUk','uk-UA'],['voiceEn','en-US']].forEach(([id, lang]) => {
+  $('setAccent').value = EN();
+  [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
     const list = voicesFor(lang).sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang));
     const cur = pickVoice(lang);
     $(id).innerHTML = list.length ? list.map(v => `<option value="${esc(v.name)}">${esc(v.name.replace(/\s*\(.*?\)\s*/g,' ').trim())}${v.localService ? '' : ' ☁'}</option>`).join('') : '<option value="">немає голосу</option>';
@@ -844,9 +919,10 @@ $('setNew').onchange = e => { db.settings.newPer = +e.target.value; save(); rend
 $('setHints').onchange = e => { db.settings.hints = e.target.value === '1'; save(); };
 $('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
 $('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
-$('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', 'en-US'); };
+$('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', EN()); };
+$('setAccent').onchange = e => { db.settings.accent = e.target.value; db.settings.voiceEn = ''; save(); renderStart(); speak('Hi! This is how I will sound now.', EN()); };
 $('tryUk').onclick = () => speak('Привіт! Так звучить цей голос.', 'uk-UA');
-$('tryEn').onclick = () => speak('Hi! This is how this voice sounds.', 'en-US');
+$('tryEn').onclick = () => speak('Hi! This is how this voice sounds.', EN());
 
 /* ---------- Install as app ---------- */
 let installEvt = null;
