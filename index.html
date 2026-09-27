@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#021615">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>English</title>
+<title>AV ENGLISH</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -41,7 +41,9 @@ button{cursor:pointer}
 .wrap{max-width:560px;margin:0 auto;padding:16px 18px 40px}
 
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.wordmark{height:40px;width:auto;display:block;border-radius:10px;box-shadow:0 0 22px -6px var(--glow)}
+.badge{display:flex;align-items:center;background:linear-gradient(180deg,#00080a,#00100f 60%,#001718);border-radius:10px;box-shadow:0 0 22px -6px var(--glow);padding-left:10px;overflow:hidden}
+.av{font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.02em;background:linear-gradient(180deg,#fff,#b8fff1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wordmark{height:40px;width:auto;display:block;margin-left:4px}
 .logo{width:36px;height:36px;flex:none;border-radius:10px;box-shadow:0 0 18px -4px var(--glow)}
 .brand{display:flex;align-items:center;gap:8px;font-size:1.1rem!important;font-family:var(--display);font-weight:700;font-size:1.25rem;letter-spacing:-.01em;margin:0}
 .tabs{display:flex;background:var(--surface);border-radius:999px;padding:4px;gap:2px;border:1px solid var(--line)}
@@ -89,6 +91,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;fle
 .feedback strong{display:block;font-size:1.15rem}
 .feedback.ok strong{color:var(--ok)}
 .feedback.bad strong{color:var(--bad)}
+.choices{display:grid;gap:8px;margin:0 0 12px}
+.choices:empty{display:none}
+.choice{text-align:left;padding:13px 16px;font-size:1.05rem;border:1px solid var(--line);background:var(--surface)}
+.choice b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--grad);color:var(--on-primary);margin-right:8px;font-size:.85rem}
 .typed{display:none;gap:8px;margin-bottom:12px}
 .typed.show{display:flex}
 input[type=text],textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:11px 14px}
@@ -128,7 +134,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><img class="wordmark" src="wordmark.png" alt="English" width="150" height="40"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v16</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v17</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -158,7 +164,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div id="packRows"></div>
       <div class="setting"><span>Голос українською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Прослухати">▶</button></span></div>
       <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
-      <div class="setting"><span>Друга спроба, якщо не розчув</span>
+      <div class="setting"><span>Варіанти відповіді, якщо не розчув</span>
         <select id="setSecond"><option value="1">Так</option><option value="0">Ні</option></select></div>
       <div class="setting"><span>Англійська вимова</span>
         <select id="setAccent"><option value="en-US">Американська</option><option value="en-GB">Британська</option></select></div>
@@ -181,6 +187,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
       </button>
       <div class="wave" aria-hidden="true"><svg viewBox="0 0 400 22" preserveAspectRatio="none"><path d="M0 11 Q25 1 50 11 T100 11 T150 11 T200 11 T250 11 T300 11 T350 11 T400 11"/></svg></div>
+      <div class="choices" id="choices"></div>
       <div class="feedback" id="feedback"></div>
       <form class="typed" id="typedForm">
         <input type="text" id="typedInput" placeholder="Переклад англійською" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -605,7 +612,7 @@ async function presentItem(){
   $('counter').textContent = (session.i + 1) + ' / ' + session.queue.length;
   $('word').textContent = w.uk;
   $('hint').textContent = w.hint || '';
-  $('feedback').className = 'feedback'; $('feedback').innerHTML = '';
+  $('feedback').className = 'feedback'; $('feedback').innerHTML = ''; $('choices').innerHTML = '';
   $('dunnoBtn').hidden = false; $('typedInput').value = '';
   setStatus('');
   const lead = it.phase === 'retry' && session.firstRetry !== false ? 'Ще раз слова з помилками. ' : '';
@@ -625,7 +632,7 @@ async function listenLoop(step){
   const mine = () => alive(step) && !session.locked && session.listenId === myId;
   if (!SR){ setStatus('Браузер не розпізнає голос. Введіть переклад текстом'); $('typedForm').classList.add('show'); return; }
   const { w } = current();
-  let silent = 0, reprompts = 0, deaf = 0, secondTried = false;
+  let silent = 0, reprompts = 0, deaf = 0, choiceOffered = false;
   listenHook = (t, x) => {
     if (!mine()) return;
     if (t === 'audio') setStatus('Слухаю… говоріть');
@@ -670,14 +677,74 @@ async function listenLoop(step){
     if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
     if (cmd === 'stop'){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
-    if (db.settings.secondTry !== false && !secondTried){
-      secondTried = true;
-      setStatus('Почув «' + heard[0] + '». Скажіть ще раз');
-      await speak(pick(['Не впевнений, що розчув. Скажіть ще раз?', 'Повторіть, будь ласка, трохи чіткіше.', 'Можна ще раз?']), 'uk-UA');
-      continue;
+    if (db.settings.choices !== false && !choiceOffered){
+      choiceOffered = true;
+      const chosen = await askChoice(w, heard, mine);
+      if (!mine() || chosen == null) return;
+      return handleAnswer([chosen], chosen);
     }
     return handleAnswer(heard, heard[0]);
   }
+}
+
+/* ---------- Multiple choice when the recogniser is unsure ---------- */
+function distractors(w, n = 2){
+  const mean = meanings(w), words = w.en[0].split(' ').length;
+  const pool = db.words.filter(x => x.id !== w.id && (x.pack || 'mine') === (w.pack || 'mine')
+    && !x.en.some(e => w.en.includes(e)) && !meanings(x).some(m => mean.includes(m)));
+  const same = pool.filter(x => x.en[0].split(' ').length === words);
+  const src = same.length >= n ? same : pool;
+  const out = [];
+  while (out.length < n && src.length){
+    const x = src.splice(Math.floor(Math.random() * src.length), 1)[0];
+    if (!out.includes(x.en[0])) out.push(x.en[0]);
+  }
+  return out;
+}
+const NUMBER_WORDS = [
+  ['one','1','first','won','van','wan','number one','option one'],
+  ['two','2','second','to','too','tu','number two','option two'],
+  ['three','3','third','tree','free','sri','number three','option three']
+];
+function parseChoice(heard, opts){
+  for (const h of heard){
+    const n = h.toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+    const idx = NUMBER_WORDS.findIndex(list => list.includes(n) || list.some(x => n === 'the ' + x));
+    if (idx > -1) return idx;
+  }
+  const byWord = opts.findIndex(o => isCorrect(heard, { en: [o] }));
+  return byWord > -1 ? byWord : null;
+}
+function askChoice(w, heard, stillMine){
+  const opts = [w.en[0], ...distractors(w)].sort(() => Math.random() - 0.5);
+  return new Promise(async resolve => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; stopListening(); if (hasTTS) speechSynthesis.cancel(); $('choices').innerHTML = ''; resolve(v); };
+    $('choices').innerHTML = `<p class="small muted" style="margin:0 0 8px">Почув «${esc(heard[0])}». Який варіант ви сказали?</p>` +
+      opts.map((o, i) => `<button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button>`).join('');
+    $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => finish(opts[+b.dataset.i]));
+    setStatus('Скажіть «one», «two» чи «three» або натисніть');
+    if (!session.tapMode){
+      await speak('Не впевнений, що розчув. Який варіант?', 'uk-UA');
+      for (let i = 0; i < opts.length && !done && stillMine(); i++){
+        await speak(['Один', 'Два', 'Три'][i], 'uk-UA');
+        if (!done && stillMine()) await speak(opts[i], EN());
+        await wait(150);
+      }
+      for (let t = 0; t < 3 && !done && stillMine(); t++){
+        setStatus('Слухаю номер варіанта…');
+        try {
+          const h = await listen(8000);
+          const idx = parseChoice(h, opts);
+          if (idx != null) return finish(opts[idx]);
+          setStatus('Скажіть «one», «two» чи «three» або натисніть');
+        } catch(e){ if (e === 'aborted') break; }
+      }
+      if (!done && stillMine()) setStatus('Натисніть на варіант, який ви сказали');
+    }
+    // stop waiting if the session moved on (pause, next word, end)
+    const guard = setInterval(() => { if (!stillMine()){ clearInterval(guard); finish(null); } if (done) clearInterval(guard); }, 400);
+  });
 }
 
 function pauseSession(msg, spoken){
@@ -907,7 +974,7 @@ function renderStart(){
   $('setNew').value = String(db.settings.newPer);
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
-  $('setSecond').value = db.settings.secondTry === false ? '0' : '1';
+  $('setSecond').value = db.settings.choices === false ? '0' : '1';
   $('setAccent').value = EN();
   [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
     const list = voicesFor(lang).sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang));
@@ -931,7 +998,7 @@ function renderStart(){
 }
 $('setNew').onchange = e => { db.settings.newPer = +e.target.value; save(); renderStart(); };
 $('setHints').onchange = e => { db.settings.hints = e.target.value === '1'; save(); };
-$('setSecond').onchange = e => { db.settings.secondTry = e.target.value === '1'; save(); };
+$('setSecond').onchange = e => { db.settings.choices = e.target.value === '1'; save(); };
 $('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
 $('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
 $('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', EN()); };
@@ -1016,7 +1083,7 @@ $('importBtn').onclick = () => {
   if (!t) return;
   try { const d = JSON.parse(t); if (!Array.isArray(d.words)) throw 0;
     if (confirm(`Замінити поточні слова (${db.words.length}) на копію (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}) } }; save(); renderList(); toast('Відновлено'); } }
-  catch(e){ toast('Це не схоже на копію з Відлуння'); }
+  catch(e){ toast('Це не схоже на копію з AV ENGLISH'); }
 };
 
 /* ---------- Init ---------- */
