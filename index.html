@@ -127,7 +127,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><img class="logo" src="logo-96.png" alt="">Відлуння <span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v14</span></h1>
+    <h1 class="brand"><img class="logo" src="logo-96.png" alt="">Відлуння <span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v15</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -157,6 +157,8 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div id="packRows"></div>
       <div class="setting"><span>Голос українською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Прослухати">▶</button></span></div>
       <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
+      <div class="setting"><span>Друга спроба, якщо не розчув</span>
+        <select id="setSecond"><option value="1">Так</option><option value="0">Ні</option></select></div>
       <div class="setting"><span>Англійська вимова</span>
         <select id="setAccent"><option value="en-US">Американська</option><option value="en-GB">Британська</option></select></div>
       <div class="setting"><span>Швидкість мовлення</span>
@@ -452,6 +454,8 @@ function listen(timeoutMs = 9000){
     const r = new SR(); rec = r;
     r.lang = EN(); r.maxAlternatives = 5; r.interimResults = true; r.continuous = false;
     let finals = null, interim = '', err = null, gotAudio = false, settled = false;
+    const seen = new Set();
+    const withSeen = list => [...new Set([...list, ...seen])];
     const hook = (t, x) => { try { listenHook && listenHook(t, x); } catch(e){} };
     const finish = (ok, val) => {
       if (settled) return; settled = true; clearTimeout(watchdog);
@@ -466,20 +470,20 @@ function listen(timeoutMs = 9000){
       for (let i = e.resultIndex; i < e.results.length; i++){
         const res = e.results[i];
         if (res.isFinal) finals = Array.from(res).map(a => a.transcript);
-        else interim = res[0].transcript;
+        else { interim = res[0].transcript; seen.add(interim); }
       }
-      if (finals) return finish(true, finals);
+      if (finals) return finish(true, withSeen(finals));
       if (interim) hook('interim', interim);
     };
     r.onerror = e => { err = e.error; };
     r.onend = () => {
-      if (finals) finish(true, finals);
-      else if (interim) finish(true, [interim]);
+      if (finals) finish(true, withSeen(finals));
+      else if (interim) finish(true, withSeen([interim]));
       else finish(false, err || (gotAudio ? 'no-speech' : 'no-audio'));
     };
     // Some Android builds never fire onend: don't wait forever
     const watchdog = setTimeout(() => {
-      if (interim) finish(true, [interim]);
+      if (interim) finish(true, withSeen([interim]));
       else finish(false, gotAudio ? 'no-speech' : 'no-audio');
     }, timeoutMs);
     try { r.start(); $('mic').classList.add('listening'); } catch(e){ finish(false, 'start-failed'); }
@@ -620,7 +624,7 @@ async function listenLoop(step){
   const mine = () => alive(step) && !session.locked && session.listenId === myId;
   if (!SR){ setStatus('Браузер не розпізнає голос. Введіть переклад текстом'); $('typedForm').classList.add('show'); return; }
   const { w } = current();
-  let silent = 0, reprompts = 0, deaf = 0;
+  let silent = 0, reprompts = 0, deaf = 0, secondTried = false;
   listenHook = (t, x) => {
     if (!mine()) return;
     if (t === 'audio') setStatus('Слухаю… говоріть');
@@ -665,6 +669,12 @@ async function listenLoop(step){
     if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
     if (cmd === 'stop'){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
+    if (db.settings.secondTry !== false && !secondTried){
+      secondTried = true;
+      setStatus('Почув «' + heard[0] + '». Скажіть ще раз');
+      await speak(pick(['Не впевнений, що розчув. Скажіть ще раз?', 'Повторіть, будь ласка, трохи чіткіше.', 'Можна ще раз?']), 'uk-UA');
+      continue;
+    }
     return handleAnswer(heard, heard[0]);
   }
 }
@@ -896,6 +906,7 @@ function renderStart(){
   $('setNew').value = String(db.settings.newPer);
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
+  $('setSecond').value = db.settings.secondTry === false ? '0' : '1';
   $('setAccent').value = EN();
   [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
     const list = voicesFor(lang).sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang));
@@ -919,6 +930,7 @@ function renderStart(){
 }
 $('setNew').onchange = e => { db.settings.newPer = +e.target.value; save(); renderStart(); };
 $('setHints').onchange = e => { db.settings.hints = e.target.value === '1'; save(); };
+$('setSecond').onchange = e => { db.settings.secondTry = e.target.value === '1'; save(); };
 $('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
 $('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
 $('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', EN()); };
