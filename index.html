@@ -134,7 +134,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v20</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v21</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -674,8 +674,9 @@ async function pickChatModel(){
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const ids = ((await r.json()).data || []).map(m => m.id);
   const bad = /audio|tts|transcribe|realtime|search|image|embed|moderation|whisper|dall|codex|instruct/;
-  const pref = ['gpt-5-mini','gpt-5.1-mini','gpt-5.2-mini','gpt-4.1-mini','gpt-4o-mini'];
-  chatModel = pref.find(p => ids.includes(p)) || ids.filter(i => /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.find(i => /^gpt/.test(i) && !bad.test(i));
+  // fast non-reasoning models first: a slow model makes the phone drop the connection
+  const pref = ['gpt-4.1-mini','gpt-4o-mini','gpt-4.1-nano','gpt-5-mini','gpt-5.1-mini','gpt-5.2-mini'];
+  chatModel = pref.find(p => ids.includes(p)) || ids.filter(i => /^gpt-4/.test(i) && /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.filter(i => /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.find(i => /^gpt/.test(i) && !bad.test(i));
   if (!chatModel) throw new Error('немає моделі');
   return chatModel;
 }
@@ -687,11 +688,20 @@ async function writeHints(words){
     'Використовуй уточнювальні синоніми, відтінок значення або типову ситуацію. Приклад: «чудовий» для magnificent — «величний, вражаючий розмахом»; для terrific — «просто відмінний, про враження». ' +
     'НЕ пиши англійське слово, його частини чи першу літеру. Не повторюй сам український переклад. Без лапок. ' +
     'Відповідай лише JSON-об\'єктом {"id": "пояснення", ...}.\n' + JSON.stringify(items);
-  const r = await fetch(OA + '/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 6000 })
-  });
+  const body = { model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 3000 };
+  if (/^gpt-5|^o\d/.test(model)) body.reasoning_effort = 'minimal';
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 75000);
+  let r;
+  try {
+    r = await fetch(OA + '/chat/completions', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e){ throw new Error(e.name === 'AbortError' ? 'OpenAI не відповів вчасно' : 'немає зв\'язку з OpenAI (' + e.message + ')'); }
+  finally { clearTimeout(tm); }
+  if (r.status === 401) throw new Error('ключ не підходить або закінчився');
+  if (r.status === 429) throw new Error('закінчився баланс або забагато запитів (429)');
   if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
   const j = await r.json();
   const txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').replace(/```json|```/g, '').trim();
@@ -708,8 +718,8 @@ async function writeHints(words){
 async function ensureHints(ids){
   if (!db.settings.oaKey || db.settings.autoHints === false) return;
   const need = ids.map(id => db.words.find(w => w.id === id)).filter(w => w && !w.hint).slice(0, 60);
-  for (let i = 0; i < need.length; i += 30){
-    try { await writeHints(need.slice(i, i + 30)); } catch(e){ console.warn(e); return; }
+  for (let i = 0; i < need.length; i += 20){
+    try { await writeHints(need.slice(i, i + 20)); } catch(e){ console.warn(e); return; }
   }
 }
 
@@ -1375,13 +1385,24 @@ $('hintsBtn').onclick = async () => {
   const list = ($('hintsScope').value === 'all' ? db.words : activeWords()).filter(w => !w.hint);
   if (!list.length){ out.textContent = 'У всіх слів уже є пояснення.'; return; }
   hintsRunning = true; $('hintsBtn').textContent = 'Зупинити';
-  let done = 0, fails = 0;
-  for (let i = 0; i < list.length && hintsRunning; i += 30){
-    out.textContent = `Пишу пояснення… ${done} з ${list.length}`;
-    try { done += await writeHints(list.slice(i, i + 30)); fails = 0; }
-    catch(e){ if (++fails >= 3){ out.textContent = 'Помилка OpenAI: ' + e.message; break; } i -= 30; await wait(2000); }
+  let lock = null; try { lock = await navigator.wakeLock.request('screen'); } catch(e){}
+  const B = 20;
+  let done = 0, tries = 0, skipped = 0, streak = 0, lastErr = '';
+  for (let i = 0; i < list.length && hintsRunning; ){
+    out.textContent = `Пишу пояснення… ${done} з ${list.length}. Не закривайте додаток.`;
+    try { done += await writeHints(list.slice(i, i + B)); i += B; tries = 0; streak = 0; }
+    catch(e){
+      lastErr = e.message || String(e);
+      if (/ключ|429/.test(lastErr)) { skipped = -1; break; }
+      if (++tries >= 3){ skipped += Math.min(B, list.length - i); i += B; tries = 0; if (++streak >= 4) { skipped = -1; break; } }
+      out.textContent = `Повторюю… (${lastErr})`;
+      await wait(3000);
+    }
   }
-  if (!fails) out.textContent = `Готово: написано ${done} пояснень.`;
+  try { lock && lock.release(); } catch(e){}
+  if (skipped < 0) out.textContent = `Зупинено: ${lastErr}. Написано ${done}. Натисніть ще раз, щоб продовжити.`;
+  else if (!hintsRunning) out.textContent = `Зупинено. Написано ${done}. Натисніть ще раз, щоб продовжити.`;
+  else out.textContent = `Готово: написано ${done} пояснень.` + (skipped ? ` ${skipped} слів пропущено — натисніть ще раз, щоб дописати.` : '');
   hintsRunning = false; $('hintsBtn').textContent = 'Написати пояснення';
   renderList();
 };
