@@ -97,7 +97,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;fle
 .choice b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--grad);color:var(--on-primary);margin-right:8px;font-size:.85rem}
 .typed{display:none;gap:8px;margin-bottom:12px}
 .typed.show{display:flex}
-input[type=text],textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:11px 14px}
+input[type=text],input[type=password],textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:11px 14px}
 textarea{min-height:120px;resize:vertical}
 
 /* Summary */
@@ -134,7 +134,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v17</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v19</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -159,11 +159,30 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <p class="small" id="micTestOut" style="margin-bottom:0"></p>
     </div>
     <div class="panel">
+      <h2 class="small" style="margin:0 0 4px;font-size:1rem">OpenAI: живий голос і краще розпізнавання</h2>
+      <p class="small muted" style="margin:0 0 10px">Ключ зберігається лише на цьому телефоні й не потрапляє в копію чи на GitHub. Без ключа працює вбудований голос телефона.</p>
+      <div class="row" style="flex-wrap:nowrap">
+        <input type="password" id="oaKey" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn primary" id="oaSave">Зберегти</button>
+      </div>
+      <p class="small" id="oaStatus" style="margin:8px 0 0"></p>
+      <div id="oaOpts">
+        <div class="setting"><span>Який голос</span><span class="row" style="flex-wrap:nowrap">
+          <select id="oaVoiceName" class="voice-sel"><option value="coral">Coral · теплий</option><option value="nova">Nova · бадьорий</option><option value="shimmer">Shimmer · м'який</option><option value="sage">Sage · спокійний</option><option value="ballad">Ballad · виразний</option><option value="alloy">Alloy · нейтральний</option><option value="ash">Ash · чоловічий</option><option value="echo">Echo · чоловічий</option><option value="onyx">Onyx · низький чоловічий</option><option value="verse">Verse · живий чоловічий</option></select>
+          <button class="icon-btn" id="oaTry" aria-label="Прослухати">▶</button></span></div>
+        <div class="setting"><span>Живий голос</span><select id="oaVoice"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
+        <div class="setting"><span>Розпізнавання</span><select id="oaEars"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
+        <div class="setting"><span>Точність</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-mini-transcribe">Звичайна · дешевше</option><option value="gpt-4o-transcribe">Найвища</option></select></div>
+      </div>
+    </div>
+    <div class="panel">
       <div class="setting"><span>Нових слів за сесію</span>
         <select id="setNew"><option>5</option><option>10</option><option>15</option><option>20</option><option>30</option></select></div>
       <div id="packRows"></div>
       <div class="setting"><span>Голос українською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Прослухати">▶</button></span></div>
       <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
+      <div class="setting"><span>Підказка: перша літера</span>
+        <select id="setLetter"><option value="nohint">Якщо немає пояснення</option><option value="twins">Лише для синонімів</option><option value="always">Завжди</option><option value="off">Ніколи</option></select></div>
       <div class="setting"><span>Варіанти відповіді, якщо не розчув</span>
         <select id="setSecond"><option value="1">Так</option><option value="0">Ні</option></select></div>
       <div class="setting"><span>Англійська вимова</span>
@@ -200,7 +219,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
         <button class="btn" id="pauseBtn">Пауза</button>
       </div>
     </div>
-    <p class="small muted" style="text-align:center">Голосові команди: «repeat» — повторити, «I don't know» — не знаю, «stop» — пауза</p>
+    <p class="small muted" style="text-align:center">Голосові команди: «repeat» — повторити, «hint» — підказка, «I don't know» — не знаю, «stop» — пауза</p>
     <button class="btn ghost big" id="endBtn">Завершити сесію</button>
   </section>
 
@@ -437,7 +456,7 @@ function pickVoice(lang){
   const chosen = db.settings && db.settings[lang.startsWith('uk') ? 'voiceUk' : 'voiceEn'];
   return list.find(v => v.name === chosen) || list.sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang))[0];
 }
-function speak(text, lang){
+function speakDevice(text, lang){
   return new Promise(res => {
     if (!hasTTS || !text) return res();
     speechSynthesis.cancel();
@@ -453,9 +472,9 @@ function speak(text, lang){
   });
 }
 let rec = null;
-function stopListening(){ if (rec) { const r = rec; rec = null; try{ r.abort(); }catch(e){} } $('mic').classList.remove('listening'); }
+function stopListening(){ if (oaRec) oaRec.abort(); if (rec) { const r = rec; rec = null; try{ r.abort(); }catch(e){} } $('mic').classList.remove('listening'); }
 let listenHook = null; // receives 'audio' | 'speech' | 'interim' events for live status
-function listen(timeoutMs = 9000){
+function listenDevice(timeoutMs = 9000){
   return new Promise((resolve, reject) => {
     if (!SR) return reject('unsupported');
     stopListening();
@@ -496,6 +515,145 @@ function listen(timeoutMs = 9000){
     }, timeoutMs);
     try { r.start(); $('mic').classList.add('listening'); } catch(e){ finish(false, 'start-failed'); }
   });
+}
+
+/* ---------- OpenAI voice + recognition (optional, key stays on this phone) ---------- */
+const OA = 'https://api.openai.com/v1';
+const oaOn = kind => !!(db.settings.oaKey && db.settings[kind] !== false && !oaBroken[kind]);
+const oaBroken = { oaVoice: false, oaEars: false };
+let oaAudio = null, oaRec = null;
+function stopAudio(){ if (oaAudio){ try { oaAudio.pause(); } catch(e){} oaAudio.onended && oaAudio.onended(); oaAudio = null; } }
+function hush(){ if (hasTTS) speechSynthesis.cancel(); stopAudio(); }
+function oaFail(kind, err){
+  if (oaBroken[kind]) return;
+  oaBroken[kind] = true;
+  const why = /401/.test(err) ? 'невірний ключ' : /429/.test(err) ? 'закінчились кошти або ліміт' : 'немає зв\'язку';
+  toast('OpenAI недоступний (' + why + '). Тимчасово працює вбудований ' + (kind === 'oaVoice' ? 'голос' : 'розпізнавач'));
+  setTimeout(() => { oaBroken[kind] = false; }, 120000);
+}
+// tiny IndexedDB cache so every phrase is paid for only once
+const cache = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('av-audio', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('a');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = (mode, fn) => open().then(d => new Promise((res, rej) => { const t = d.transaction('a', mode); const q = fn(t.objectStore('a')); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }));
+  return { get: k => tx('readonly', s => s.get(k)).catch(() => null), set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null) };
+})();
+function oaInstructions(lang){
+  if (lang.startsWith('uk')) return 'Говори українською природно, тепло й доброзичливо, як привітний учитель. Живі інтонації, помірний темп, без поспіху.';
+  return 'Speak natural ' + (lang === 'en-GB' ? 'British' : 'American') + ' English, warm and friendly like a supportive tutor. Pronounce the word clearly at a relaxed pace.';
+}
+async function oaTTS(text, lang){
+  const voice = db.settings.oaVoiceName || 'coral';
+  const key = ['v2', voice, lang, db.settings.rate || 1, text].join('|');
+  let blob = await cache.get(key);
+  if (!blob){
+    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 12000);
+    const r = await fetch(OA + '/audio/speech', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: text, instructions: oaInstructions(lang), response_format: 'mp3', speed: db.settings.rate || 1 })
+    }).finally(() => clearTimeout(tm));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    blob = await r.blob();
+    cache.set(key, blob);
+  }
+  return blob;
+}
+function playBlob(blob){
+  return new Promise(res => {
+    stopAudio();
+    const url = URL.createObjectURL(blob); const a = new Audio(url); oaAudio = a;
+    let done = false; const fin = () => { if (done) return; done = true; URL.revokeObjectURL(url); if (oaAudio === a) oaAudio = null; res(); };
+    a.onended = fin; a.onerror = fin;
+    a.play().catch(fin);
+  });
+}
+async function speak(text, lang){
+  if (!text) return;
+  if (oaOn('oaVoice')){
+    try { const b = await oaTTS(text, lang); return await playBlob(b); }
+    catch(e){ oaFail('oaVoice', String(e)); }
+  }
+  return speakDevice(text, lang);
+}
+function prefetchSpeech(text, lang){ if (oaOn('oaVoice') && text) oaTTS(text, lang).catch(() => {}); }
+
+// record until the speaker stops, then transcribe
+function oaRecord(maxMs){
+  return new Promise(async (resolve, reject) => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch(e){ return reject(e && e.name === 'NotAllowedError' ? 'not-allowed' : 'no-audio'); }
+    const mime = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    let rec; try { rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); } catch(e){ stream.getTracks().forEach(t => t.stop()); return reject('no-audio'); }
+    const chunks = []; let spoke = false, aborted = false, lastLoud = 0, t0 = performance.now();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 1024; ctx.createMediaStreamSource(stream).connect(an);
+    const buf = new Float32Array(an.fftSize); let floor = 0.01, raf;
+    const cleanup = () => { cancelAnimationFrame(raf); try { ctx.close(); } catch(e){} stream.getTracks().forEach(t => t.stop()); $('mic').classList.remove('listening'); };
+    const ctlObj = { abort(){ aborted = true; try { rec.stop(); } catch(e){} } };
+    oaRec = ctlObj;
+    rec.ondataavailable = e => e.data && e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      cleanup(); if (oaRec === ctlObj) oaRec = null;
+      if (aborted) return reject('aborted');
+      if (!spoke) return reject('no-speech');
+      resolve(new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' }));
+    };
+    const tick = () => {
+      an.getFloatTimeDomainData(buf);
+      let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length), now = performance.now();
+      if (!spoke && now - t0 < 400) floor = Math.max(floor, rms * 1.2);      // learn room noise first
+      if (rms > Math.max(0.02, floor * 2.2)){ if (!spoke){ spoke = true; try { listenHook && listenHook('speech'); } catch(e){} } lastLoud = now; }
+      const silentFor = now - lastLoud;
+      if ((spoke && silentFor > 900) || (!spoke && now - t0 > 7000) || now - t0 > maxMs){ try { rec.stop(); } catch(e){} return; }
+      raf = requestAnimationFrame(tick);
+    };
+    rec.start(); $('mic').classList.add('listening');
+    try { listenHook && listenHook('audio'); } catch(e){}
+    tick();
+  });
+}
+async function oaTranscribe(blob, hintWords){
+  const fd = new FormData();
+  const ext = /mp4/.test(blob.type) ? 'mp4' : /ogg/.test(blob.type) ? 'ogg' : 'webm';
+  fd.append('file', blob, 'answer.' + ext);
+  fd.append('model', db.settings.oaModel || 'gpt-4o-mini-transcribe');
+  fd.append('language', 'en');
+  fd.append('prompt', 'English vocabulary practice. The learner answers with one English word or a short phrase, sometimes "one", "two", "three", "repeat" or "I don\'t know". Possible words include: ' + hintWords.join(', ') + '.');
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 15000);
+  const r = await fetch(OA + '/audio/transcriptions', { method: 'POST', body: fd, signal: ctl.signal, headers: { 'Authorization': 'Bearer ' + db.settings.oaKey } }).finally(() => clearTimeout(tm));
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return (j.text || '').trim();
+}
+function hintFor(){
+  if (!session || !session.queue[session.i]) return [];
+  const w = db.words.find(x => x.id === session.queue[session.i].id); if (!w) return [];
+  const pool = db.words.filter(x => (x.pack || 'mine') === (w.pack || 'mine') && x.id !== w.id);
+  const extra = []; for (let k = 0; k < 5 && pool.length; k++) extra.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].en[0]);
+  return [w.en[0], ...extra].sort(() => Math.random() - 0.5);
+}
+async function listen(timeoutMs = 9000){
+  if (oaOn('oaEars') && navigator.mediaDevices && window.MediaRecorder){
+    stopListening();
+    const blob = await oaRecord(timeoutMs);          // rejects with no-speech / aborted / not-allowed
+    try { listenHook && listenHook('interim', '…'); } catch(e){}
+    try {
+      const text = await oaTranscribe(blob, hintFor());
+      if (!text) throw 'no-speech';
+      return [text.replace(/[.!?]+$/,'')];
+    } catch(e){
+      if (e === 'no-speech') throw e;
+      oaFail('oaEars', String(e));
+    }
+  }
+  return listenDevice(timeoutMs);
 }
 
 /* ---------- Answer checking ---------- */
@@ -549,6 +707,7 @@ function fuzzyMatch(heard, word){
 }
 function isCorrect(heard, word){ return exactMatch(heard, word) || fuzzyMatch(heard, word); }
 const COMMANDS = {
+  hint:   ['hint','clue','letter','give me a hint','help','first letter'],
   repeat: ['repeat','repeat please','again','one more time','say again','say it again','what','sorry','pardon'],
   dunno:  ["i don't know","don't know","i dont know","dont know","no idea","i have no idea","skip","pass","next","i forgot","forgot"],
   stop:   ['stop','pause','wait','stop please']
@@ -595,10 +754,33 @@ function speakable(t){
   return t.replace(/\s*\(\s*/g, ', ').replace(/\s*\)\s*/g, ' ').replace(/\s*\/\s*/g, ' або ')
     .replace(/\s*;\s*/g, ', ').replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
 }
+// does another card in the same level share a Ukrainian meaning with this one?
+function hasTwins(w){
+  const m = meanings(w);
+  return db.words.some(x => x.id !== w.id && (x.pack || 'mine') === (w.pack || 'mine') && meanings(x).some(k => m.includes(k)));
+}
+function needsLetter(w){
+  const mode = db.settings.letterCue || 'nohint';
+  if (mode === 'off') return false;
+  if (mode === 'always') return true;
+  if (mode === 'twins') return hasTwins(w);
+  return !(db.settings.hints && w.hint) || hasTwins(w);  // 'nohint': unless a real explanation is there
+}
+function letterText(w){
+  const t = w.en[0], n = t.split(' ').length;
+  return t[0].toUpperCase() + '…' + (n > 1 ? ' · ' + n + ' слова' : '');
+}
+async function sayLetter(w){
+  const t = w.en[0], n = t.split(' ').length;
+  await speak('Англійською на літеру', 'uk-UA');
+  await speak(t[0].toUpperCase(), EN());
+  if (n > 1) await speak(n + (n < 5 ? ' слова' : ' слів'), 'uk-UA');
+}
 async function sayWord(w, prefix = ''){
   if (prefix) { await speak(prefix, 'uk-UA'); await wait(150); }
   await speak(speakable(w.uk), 'uk-UA');
   if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), 'uk-UA'); }
+  if (needsLetter(w)){ await wait(250); await sayLetter(w); }
 }
 
 async function presentItem(){
@@ -611,7 +793,7 @@ async function presentItem(){
   $('phaseLabel').textContent = PHASE[it.phase];
   $('counter').textContent = (session.i + 1) + ' / ' + session.queue.length;
   $('word').textContent = w.uk;
-  $('hint').textContent = w.hint || '';
+  $('hint').textContent = [w.hint, needsLetter(w) ? 'англ.: ' + letterText(w) : ''].filter(Boolean).join(' · ');
   $('feedback').className = 'feedback'; $('feedback').innerHTML = ''; $('choices').innerHTML = '';
   $('dunnoBtn').hidden = false; $('typedInput').value = '';
   setStatus('');
@@ -620,6 +802,8 @@ async function presentItem(){
   if (lead) await speak(lead, 'uk-UA');
   if (!alive(step)) return;
   await sayWord(w);
+  const nx = session.queue[session.i + 1] && db.words.find(x => x.id === session.queue[session.i + 1].id);
+  if (nx){ prefetchSpeech(speakable(nx.uk), 'uk-UA'); if (db.settings.hints && nx.hint) prefetchSpeech(speakable(nx.hint), 'uk-UA'); prefetchSpeech(nx.en[0], EN()); }
   if (!alive(step)) return;
   if (session.tapMode) setStatus('Натисніть мікрофон і скажіть переклад');
   else listenLoop(step);
@@ -630,7 +814,7 @@ function setStatus(t){ $('status').textContent = t; }
 async function listenLoop(step){
   const myId = session.listenId = (session.listenId || 0) + 1;
   const mine = () => alive(step) && !session.locked && session.listenId === myId;
-  if (!SR){ setStatus('Браузер не розпізнає голос. Введіть переклад текстом'); $('typedForm').classList.add('show'); return; }
+  if (!SR && !oaOn('oaEars')){ setStatus('Браузер не розпізнає голос. Введіть переклад текстом'); $('typedForm').classList.add('show'); return; }
   const { w } = current();
   let silent = 0, reprompts = 0, deaf = 0, choiceOffered = false;
   listenHook = (t, x) => {
@@ -675,6 +859,10 @@ async function listenLoop(step){
     if (isCorrect(heard, w) || synonymHit(heard, w)) return handleAnswer(heard, heard[0]);
     const cmd = command(heard);
     if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
+    if (cmd === 'hint'){
+      $('hint').textContent = [w.hint, 'англ.: ' + letterText(w)].filter(Boolean).join(' · ');
+      await sayLetter(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue;
+    }
     if (cmd === 'stop'){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
     if (db.settings.choices !== false && !choiceOffered){
@@ -719,7 +907,7 @@ function askChoice(w, heard, stillMine){
   const opts = [w.en[0], ...distractors(w)].sort(() => Math.random() - 0.5);
   return new Promise(async resolve => {
     let done = false;
-    const finish = v => { if (done) return; done = true; stopListening(); if (hasTTS) speechSynthesis.cancel(); $('choices').innerHTML = ''; resolve(v); };
+    const finish = v => { if (done) return; done = true; stopListening(); hush(); $('choices').innerHTML = ''; resolve(v); };
     $('choices').innerHTML = `<p class="small muted" style="margin:0 0 8px">Почув «${esc(heard[0])}». Який варіант ви сказали?</p>` +
       opts.map((o, i) => `<button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button>`).join('');
     $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => finish(opts[+b.dataset.i]));
@@ -750,7 +938,7 @@ function askChoice(w, heard, stillMine){
 function pauseSession(msg, spoken){
   if (!session || session.paused) return;
   session.paused = true; stopListening();
-  if (hasTTS) speechSynthesis.cancel();
+  hush();
   setStatus(msg); $('pauseBtn').textContent = 'Продовжити';
   if (spoken) speak('Пауза. Торкніться екрана, коли будете готові.', 'uk-UA');
 }
@@ -792,7 +980,7 @@ function overrule(s, w){
 }
 async function handleAnswer(heard, shown){
   if (!session || session.locked) return;
-  session.locked = true; stopListening(); if (hasTTS) speechSynthesis.cancel();
+  session.locked = true; stopListening(); hush();
   $('typedForm').classList.remove('show');
   const step = session.step;
   const { it, w } = current();
@@ -834,7 +1022,7 @@ async function handleAnswer(heard, shown){
     await speak(w.en[0], EN());
     if (!alive(step)) return;
     await speak(pick(['Повторіть, будь ласка.', 'Скажіть це ще раз.', 'Спробуйте вимовити.']), 'uk-UA');
-    if (alive(step) && SR && !session.tapMode){
+    if (alive(step) && (SR || oaOn('oaEars')) && !session.tapMode){
       try {
         const again = await listen(7000);
         if (alive(step)) await speak(isCorrect(again, w) ? pick(REPEAT_OK) : pick(REPEAT_LATER), 'uk-UA');
@@ -860,7 +1048,7 @@ $('sumList').onclick = e => {
   const w = db.words.find(x => x.id === id);
   if (w && overrule(lastSession, w)){ renderSummaryList(); toast('Зараховано'); }
 };
-function endSession(){ stopListening(); if (hasTTS) speechSynthesis.cancel(); releaseAwake(); session = null; }
+function endSession(){ stopListening(); hush(); releaseAwake(); session = null; }
 function finishSession(){
   const s = session; endSession();
   $('bar').style.width = '100%';
@@ -902,7 +1090,7 @@ $('soundTest').onclick = async () => {
 };
 $('micTest').onclick = async () => {
   const out = $('micTestOut');
-  if (!SR){ out.textContent = 'Цей браузер не підтримує розпізнавання мовлення.'; return; }
+  if (!SR && !oaOn('oaEars')){ out.textContent = 'Цей браузер не підтримує розпізнавання мовлення.'; return; }
   out.textContent = 'Скажіть англійською: «hello world»…';
   listenHook = (t, x) => {
     if (t === 'audio') out.textContent = 'Мікрофон увімкнено. Говоріть…';
@@ -926,7 +1114,7 @@ $('mic').onclick = () => {
   if (session.paused){ resumeSession(); return; }
   if (session.locked) return;
   stopListening();
-  if (hasTTS) speechSynthesis.cancel();
+  hush();
   listenLoop(session.step); // started from a tap: Android allows the mic more reliably
 };
 $('pauseBtn').onclick = () => {
@@ -952,7 +1140,7 @@ $('typedForm').onsubmit = e => {
   if (v && session){ session.paused = false; handleAnswer([v], v); }
 };
 $('endBtn').onclick = () => { if (!session) return; if (Object.keys(session.graded).length) finishSession(); else { endSession(); renderStart(); show('start'); } };
-$('againBtn').onclick = () => { if (hasTTS) speechSynthesis.cancel(); renderStart(); show('start'); };
+$('againBtn').onclick = () => { hush(); renderStart(); show('start'); };
 
 /* ---------- Start screen ---------- */
 function renderStart(){
@@ -967,7 +1155,7 @@ function renderStart(){
   $('plan').textContent = (fresh || due) ? `Сьогодні: ${fresh} нових слів і ${due} на повторення.` : 'На сьогодні все повторено. Додайте нові слова або поверніться завтра.';
   $('startBtn').disabled = !(fresh || due);
   const notes = [];
-  if (!SR) notes.push('Цей браузер не розпізнає голос — відповідайте текстом. Найкраще працює Chrome.');
+  if (!SR && !oaOn('oaEars')) notes.push('Цей браузер не розпізнає голос — відповідайте текстом. Найкраще працює Chrome.');
   if (!hasTTS) notes.push('Озвучення недоступне в цьому браузері.');
   else if (voices.length && !pickVoice('uk-UA')) notes.push('Українського голосу не знайдено — встановіть його в налаштуваннях синтезу мовлення телефону.');
   $('support').textContent = notes.join(' ');
@@ -975,6 +1163,8 @@ function renderStart(){
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
   $('setSecond').value = db.settings.choices === false ? '0' : '1';
+  $('setLetter').value = db.settings.letterCue || 'nohint';
+  renderOA();
   $('setAccent').value = EN();
   [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
     const list = voicesFor(lang).sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang));
@@ -998,6 +1188,42 @@ function renderStart(){
 }
 $('setNew').onchange = e => { db.settings.newPer = +e.target.value; save(); renderStart(); };
 $('setHints').onchange = e => { db.settings.hints = e.target.value === '1'; save(); };
+function renderOA(){
+  const has = !!db.settings.oaKey;
+  $('oaKey').value = ''; $('oaKey').placeholder = has ? 'ключ збережено · ' + db.settings.oaKey.slice(0, 7) + '…' + db.settings.oaKey.slice(-4) : 'sk-...';
+  $('oaOpts').hidden = !has;
+  $('oaVoiceName').value = db.settings.oaVoiceName || 'coral';
+  $('oaVoice').value = db.settings.oaVoice === false ? '0' : '1';
+  $('oaEars').value = db.settings.oaEars === false ? '0' : '1';
+  $('oaModel').value = db.settings.oaModel || 'gpt-4o-mini-transcribe';
+  if (!has) $('oaStatus').textContent = '';
+}
+$('oaSave').onclick = async () => {
+  const k = $('oaKey').value.trim();
+  if (!k){ if (db.settings.oaKey && confirm('Видалити збережений ключ?')){ delete db.settings.oaKey; save(); renderOA(); toast('Ключ видалено'); } return; }
+  $('oaStatus').textContent = 'Перевіряю ключ…';
+  try {
+    const r = await fetch(OA + '/models', { headers: { 'Authorization': 'Bearer ' + k } });
+    if (r.status === 401) throw new Error('Ключ не підходить. Перевірте, що скопіювали його повністю.');
+    if (!r.ok) throw new Error('OpenAI відповів помилкою ' + r.status + '.');
+    db.settings.oaKey = k; save(); renderOA();
+    $('oaStatus').textContent = 'Ключ працює. Натисніть ▶, щоб почути голос.';
+  } catch(e){ $('oaStatus').textContent = (e.message || 'Немає зв\'язку з OpenAI.'); }
+};
+$('oaVoiceName').onchange = e => { db.settings.oaVoiceName = e.target.value; save(); $('oaTry').click(); };
+$('oaVoice').onchange = e => { db.settings.oaVoice = e.target.value === '1'; save(); };
+$('oaEars').onchange = e => { db.settings.oaEars = e.target.value === '1'; save(); };
+$('oaModel').onchange = e => { db.settings.oaModel = e.target.value; save(); };
+$('oaTry').onclick = async () => {
+  $('oaStatus').textContent = 'Завантажую голос…';
+  try {
+    const b1 = await oaTTS('Привіт! Я допоможу вам вивчати англійські слова. Готові?', 'uk-UA');
+    const b2 = await oaTTS('Great job! Let\'s practise some new words.', EN());
+    $('oaStatus').textContent = '';
+    await playBlob(b1); await playBlob(b2);
+  } catch(e){ $('oaStatus').textContent = /429/.test(String(e)) ? 'Потрібно поповнити баланс OpenAI (Billing → Add credits).' : 'Не вдалося: ' + e.message; }
+};
+$('setLetter').onchange = e => { db.settings.letterCue = e.target.value; save(); };
 $('setSecond').onchange = e => { db.settings.choices = e.target.value === '1'; save(); };
 $('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
 $('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
@@ -1074,7 +1300,7 @@ $('bulkBtn').onclick = () => {
   toast(`Додано: ${n}` + (bad ? `. Пропущено рядків: ${bad}` : ''));
 };
 $('exportBtn').onclick = async () => {
-  const text = JSON.stringify(db);
+  const text = JSON.stringify({ ...db, settings: { ...db.settings, oaKey: undefined } });
   try { await navigator.clipboard.writeText(text); toast('Копію скопійовано. Збережіть її в нотатках'); }
   catch(e){ prompt('Скопіюйте цей текст і збережіть:', text); }
 };
@@ -1082,7 +1308,7 @@ $('importBtn').onclick = () => {
   const t = prompt('Вставте збережену копію:');
   if (!t) return;
   try { const d = JSON.parse(t); if (!Array.isArray(d.words)) throw 0;
-    if (confirm(`Замінити поточні слова (${db.words.length}) на копію (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}) } }; save(); renderList(); toast('Відновлено'); } }
+    if (confirm(`Замінити поточні слова (${db.words.length}) на копію (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}), oaKey: db.settings.oaKey } }; save(); renderList(); toast('Відновлено'); } }
   catch(e){ toast('Це не схоже на копію з AV ENGLISH'); }
 };
 
