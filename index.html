@@ -94,6 +94,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;fle
 .choices{display:grid;gap:8px;margin:0 0 12px}
 .choices:empty{display:none}
 .choice{text-align:left;padding:13px 16px;font-size:1.05rem;border:1px solid var(--line);background:var(--surface)}
+.choice{padding:16px 18px;font-size:1.15rem}
+.choice.right{border-color:#34e0a8;background:rgba(52,224,168,.18)}
+.choice.wrong{border-color:#ff6b6b;background:rgba(255,107,107,.16)}
+.choice:disabled{opacity:1}
 .choice b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--grad);color:var(--on-primary);margin-right:8px;font-size:.85rem}
 .typed{display:none;gap:8px;margin-bottom:12px}
 .typed.show{display:flex}
@@ -134,7 +138,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v23</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v24</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -183,6 +187,8 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
       <div class="setting"><span>Підказка: перша літера</span>
         <select id="setLetter"><option value="nohint">Якщо немає пояснення</option><option value="twins">Лише для синонімів</option><option value="always">Завжди</option><option value="off">Ніколи</option></select></div>
+      <div class="setting"><span>Як відповідати</span>
+        <select id="setMode"><option value="pick">Вибрати з 3 схожих варіантів</option><option value="voice">Голосом</option></select></div>
       <div class="setting"><span>Варіанти відповіді, якщо не розчув</span>
         <select id="setSecond"><option value="1">Так</option><option value="0">Ні</option></select></div>
       <div class="setting"><span>Англійська вимова</span>
@@ -374,7 +380,7 @@ function mergePacks(words){
   return words;
 }
 function load(){
-  const defaults = { newPer: 10, hints: true, packs: { mine: true, b1: false, b2: false } };
+  const defaults = { newPer: 10, hints: true, mode: 'pick', packs: { mine: true, b1: false, b2: false } };
   try{
     const d = JSON.parse(localStorage.getItem(KEY));
     if (d && Array.isArray(d.words)){
@@ -925,6 +931,7 @@ async function presentItem(){
   $('word').textContent = w.uk;
   $('hint').textContent = [w.hint, needsLetter(w) ? 'англ.: ' + letterText(w) : ''].filter(Boolean).join(' · ');
   $('feedback').className = 'feedback'; $('feedback').innerHTML = ''; $('choices').innerHTML = '';
+  $('mic').hidden = pickMode();
   $('dunnoBtn').hidden = false; $('typedInput').value = '';
   setStatus('');
   const lead = it.phase === 'retry' && session.firstRetry !== false ? 'Ще раз слова з помилками. ' : '';
@@ -935,6 +942,7 @@ async function presentItem(){
   const nx = session.queue[session.i + 1] && db.words.find(x => x.id === session.queue[session.i + 1].id);
   for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); }
   if (!alive(step)) return;
+  if (pickMode()) return pickRound(step);
   if (session.tapMode) setStatus('Натисніть мікрофон і скажіть переклад');
   else listenLoop(step);
 }
@@ -1006,6 +1014,77 @@ async function listenLoop(step){
 }
 
 /* ---------- Multiple choice when the recogniser is unsure ---------- */
+/* ---------- Pick mode: say the word, show 3 look-alike options ---------- */
+const pickMode = () => (db.settings.mode || 'pick') === 'pick';
+function lev(a, b){
+  if (a === b) return 0; const m = a.length, n = b.length; if (!m || !n) return m || n;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++){
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+function posUk(w){
+  const m = meanings(w)[0] || '', last = m.split(' ').pop();
+  if (/(ти|тися|тись|чи)$/.test(last)) return 'v';
+  if (/(ий|ій|ся)$/.test(last) && !/тися$/.test(last)) return 'a';
+  if (/(но|ко|ло|ро|во|ьо|ше|ще)$/.test(last) && m.split(' ').length === 1) return 'd';
+  return 'n';
+}
+function hardDistractors(w, n = 2){
+  const ans = w.en[0].toLowerCase(), mean = meanings(w), pos = posUk(w), words = ans.split(' ').length;
+  const stems = mean.map(m => m.split(' ').pop().slice(0, 5)).filter(x => x.length >= 4);
+  const scored = [];
+  for (const x of db.words){
+    if (x.id === w.id) continue;
+    const e = x.en[0].toLowerCase();
+    // never offer another correct answer
+    if (x.en.some(v => w.en.map(t => t.toLowerCase()).includes(v.toLowerCase()))) continue;
+    if (meanings(x).some(m => mean.includes(m))) continue;
+    if (isCorrect([e], w)) continue;
+    let sc = 0;
+    const d = lev(ans, e), L = Math.max(ans.length, e.length);
+    sc += (1 - d / L) * 6;                                           // looks similar
+    if (ans.slice(0, 3) === e.slice(0, 3)) sc += 2;                  // same beginning
+    if (ans.slice(-3) === e.slice(-3)) sc += 1.5;                    // same ending
+    if (posUk(x) === pos) sc += 2.5;                                 // same part of speech
+    const ew = e.split(' ').length;
+    if (ew === words) sc += 1.5; else if ((ew > 1) !== (words > 1)) sc -= 4;   // phrase vs single word is too easy
+    if ((x.pack || 'mine') === (w.pack || 'mine')){
+      sc += 1;
+      if (x.added && w.added && Math.abs(x.added - w.added) < 40) sc += 2;   // same topic block
+    }
+    const xs = meanings(x).map(m => m.split(' ').pop().slice(0, 5));
+    if (stems.some(st => xs.includes(st))) sc += 2;                  // close Ukrainian meaning
+    sc += Math.random() * 1.2;
+    scored.push([sc, x.en[0]]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  const top = scored.slice(0, 5).map(t => t[1]), out = [];
+  while (out.length < n && top.length){
+    const e = top.splice(Math.floor(Math.random() * Math.min(3, top.length)), 1)[0];
+    if (!out.some(o => o.toLowerCase() === e.toLowerCase())) out.push(e);
+  }
+  return out;
+}
+function pickRound(step){
+  const { w } = current();
+  const opts = [w.en[0], ...hardDistractors(w)].sort(() => Math.random() - 0.5);
+  $('choices').innerHTML = opts.map((o, i) => `<button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button>`).join('');
+  setStatus('Оберіть переклад');
+  $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => {
+    if (!alive(step) || session.locked) return;
+    const chosen = opts[+b.dataset.i], ok = w.en.includes(chosen);
+    $('choices').querySelectorAll('.choice').forEach(c => {
+      c.disabled = true;
+      if (w.en.includes(opts[+c.dataset.i])) c.classList.add('right');
+      else if (c === b) c.classList.add('wrong');
+    });
+    handleAnswer(ok ? [chosen] : ['__wrong__'], chosen);
+  });
+}
 function distractors(w, n = 2){
   const mean = meanings(w), words = w.en[0].split(' ').length;
   const pool = db.words.filter(x => x.id !== w.id && (x.pack || 'mine') === (w.pack || 'mine')
@@ -1122,9 +1201,10 @@ async function handleAnswer(heard, shown){
     session.queue.push({ id: w.id, phase: 'retry' });
   const fb = $('feedback');
   fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+  if (pickMode() && !ok && shown) heard = [shown];
   fb.innerHTML = `<strong>${syn ? 'Теж підходить' : ok ? 'Правильно' : (heard ? 'Не зовсім' : 'Правильна відповідь')}</strong>` +
     `<span>${esc(w.en.join(', '))}</span>` +
-    (shown && !ok ? `<div class="small muted">Почув: «${esc(shown)}»</div><button class="btn" id="overBtn" style="margin-top:8px">Я сказав правильно</button>` : '');
+    (shown && !ok && !pickMode() ? `<div class="small muted">Почув: «${esc(shown)}»</div><button class="btn" id="overBtn" style="margin-top:8px">Я сказав правильно</button>` : '');
   const ob = $('overBtn');
   if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Зараховано</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Зараховано як правильну відповідь'); } };
   $('dunnoBtn').hidden = true;
@@ -1145,14 +1225,14 @@ async function handleAnswer(heard, shown){
       if (alive(step)) await speak(others.join(', '), EN());
     }
   } else {
-    setStatus('Повторіть правильний варіант уголос');
+    setStatus(pickMode() ? '' : 'Повторіть правильний варіант уголос');
     session.streak = 0;
     await speak(pick(heard ? WRONG : DUNNO), 'uk-UA');
     if (!alive(step)) return;
     await speak(w.en[0], EN());
     if (!alive(step)) return;
-    await speak(pick(['Повторіть, будь ласка.', 'Скажіть це ще раз.', 'Спробуйте вимовити.']), 'uk-UA');
-    if (alive(step) && (SR || oaOn('oaEars')) && !session.tapMode){
+    if (!pickMode()) await speak(pick(['Повторіть, будь ласка.', 'Скажіть це ще раз.', 'Спробуйте вимовити.']), 'uk-UA');
+    if (!pickMode() && alive(step) && (SR || oaOn('oaEars')) && !session.tapMode){
       try {
         const again = await listen(7000);
         if (alive(step)) await speak(isCorrect(again, w) ? pick(REPEAT_OK) : pick(REPEAT_LATER), 'uk-UA');
@@ -1293,6 +1373,7 @@ function renderStart(){
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
   $('setSecond').value = db.settings.choices === false ? '0' : '1';
+  $('setMode').value = db.settings.mode || 'pick';
   $('setLetter').value = db.settings.letterCue || 'off';
   renderOA();
   $('setAccent').value = EN();
@@ -1355,6 +1436,7 @@ $('oaTry').onclick = async () => {
 };
 $('setLetter').onchange = e => { db.settings.letterCue = e.target.value; save(); };
 $('setSecond').onchange = e => { db.settings.choices = e.target.value === '1'; save(); };
+$('setMode').onchange = e => { db.settings.mode = e.target.value; save(); };
 $('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
 $('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
 $('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', EN()); };
