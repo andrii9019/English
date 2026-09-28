@@ -134,7 +134,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v21</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v22</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -172,7 +172,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
           <button class="icon-btn" id="oaTry" aria-label="Прослухати">▶</button></span></div>
         <div class="setting"><span>Живий голос</span><select id="oaVoice"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
         <div class="setting"><span>Розпізнавання</span><select id="oaEars"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
-        <div class="setting"><span>Точність</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-mini-transcribe">Звичайна · дешевше</option><option value="gpt-4o-transcribe">Найвища</option></select></div>
+        <div class="setting"><span>Точність</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-transcribe">Найвища (рекомендую)</option><option value="gpt-4o-mini-transcribe">Звичайна · дешевше</option></select></div>
       </div>
     </div>
     <div class="panel">
@@ -553,19 +553,22 @@ const cache = (() => {
   return { get: k => tx('readonly', s => s.get(k)).catch(() => null), set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null) };
 })();
 function oaInstructions(lang){
-  if (lang.startsWith('uk')) return 'Говори українською природно, тепло й доброзичливо, як привітний учитель. Живі інтонації, помірний темп, без поспіху.';
-  return 'Speak natural ' + (lang === 'en-GB' ? 'British' : 'American') + ' English, warm and friendly like a supportive tutor. Pronounce the word clearly at a relaxed pace.';
+  const r = db.settings.rate || 1;
+  const paceUk = r >= 1.15 ? 'швидкий, енергійний темп' : r <= 0.9 ? 'спокійний темп' : 'живий, трохи швидший за звичайний темп';
+  const paceEn = r >= 1.15 ? 'a fast, energetic pace' : r <= 0.9 ? 'a calm pace' : 'a brisk, natural pace';
+  if (lang.startsWith('uk')) return 'Говори українською чітко, з ясною дикцією і правильними наголосами. ' + paceUk + ', без затягування слів і пауз. Тон теплий, бадьорий, як у привітного вчителя.';
+  return 'Speak ' + (lang === 'en-GB' ? 'British' : 'American') + ' English with crisp, very clear articulation at ' + paceEn + '. Warm, upbeat tutor voice. No drawn-out words.';
 }
 async function oaTTS(text, lang){
   const voice = db.settings.oaVoiceName || 'coral';
-  const key = ['v2', voice, lang, db.settings.rate || 1, text].join('|');
+  const key = ['v3', voice, lang, db.settings.rate || 1, text].join('|');
   let blob = await cache.get(key);
   if (!blob){
     const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 12000);
     const r = await fetch(OA + '/audio/speech', {
       method: 'POST', signal: ctl.signal,
       headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: text, instructions: oaInstructions(lang), response_format: 'mp3', speed: db.settings.rate || 1 })
+      body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: text, instructions: oaInstructions(lang), response_format: 'mp3' })
     }).finally(() => clearTimeout(tm));
     if (!r.ok) throw new Error('HTTP ' + r.status);
     blob = await r.blob();
@@ -621,7 +624,7 @@ function oaRecord(maxMs){
       if (!spoke && now - t0 < 400) floor = Math.max(floor, rms * 1.2);      // learn room noise first
       if (rms > Math.max(0.02, floor * 2.2)){ if (!spoke){ spoke = true; try { listenHook && listenHook('speech'); } catch(e){} } lastLoud = now; }
       const silentFor = now - lastLoud;
-      if ((spoke && silentFor > 900) || (!spoke && now - t0 > 7000) || now - t0 > maxMs){ try { rec.stop(); } catch(e){} return; }
+      if ((spoke && silentFor > 1300) || (!spoke && now - t0 > 7000) || now - t0 > maxMs){ try { rec.stop(); } catch(e){} return; }
       raf = requestAnimationFrame(tick);
     };
     rec.start(); $('mic').classList.add('listening');
@@ -633,7 +636,7 @@ async function oaTranscribe(blob, hintWords){
   const fd = new FormData();
   const ext = /mp4/.test(blob.type) ? 'mp4' : /ogg/.test(blob.type) ? 'ogg' : 'webm';
   fd.append('file', blob, 'answer.' + ext);
-  fd.append('model', db.settings.oaModel || 'gpt-4o-mini-transcribe');
+  fd.append('model', db.settings.oaModel || 'gpt-4o-transcribe');
   fd.append('language', 'en');
   fd.append('prompt', 'English vocabulary practice. The learner answers with one English word or a short phrase, sometimes "one", "two", "three", "repeat" or "I don\'t know". Possible words include: ' + hintWords.join(', ') + '.');
   const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 15000);
@@ -647,7 +650,7 @@ function hintFor(){
   const w = db.words.find(x => x.id === session.queue[session.i].id); if (!w) return [];
   const pool = db.words.filter(x => (x.pack || 'mine') === (w.pack || 'mine') && x.id !== w.id);
   const extra = []; for (let k = 0; k < 5 && pool.length; k++) extra.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].en[0]);
-  return [w.en[0], ...extra].sort(() => Math.random() - 0.5);
+  return [...w.en, ...extra].sort(() => Math.random() - 0.5);
 }
 async function listen(timeoutMs = 9000){
   if (oaOn('oaEars') && navigator.mediaDevices && window.MediaRecorder){
@@ -806,6 +809,7 @@ async function startSession(){
   if (!queue.length){ toast('Немає слів для повторення. Додайте нові слова.'); return; }
   session = { queue, i: 0, graded: {}, mistakes: [], right: 0, step: 0, locked: false, paused: false };
   show('session'); keepAwake();
+  queue.slice(0, 4).forEach(q => warmWord(db.words.find(x => x.id === q.id))); warmPhrases();
   $('word').textContent = ''; $('hint').textContent = '';
   session.streak = 0;
   const step0 = session.step;
@@ -850,10 +854,34 @@ async function sayLetter(w){
   await speak(t[0].toUpperCase(), EN());
   if (n > 1) await speak(n + (n < 5 ? ' слова' : ' слів'), 'uk-UA');
 }
+function wordLine(w){ return speakable(w.uk) + '. ' + speakable(w.hint).replace(/^./, c => c.toUpperCase()) + '.'; }
+// get audio ready ahead of time so the app answers without pauses
+const warmQ = []; let warmBusy = 0;
+function warm(text, lang){
+  if (!oaOn('oaVoice') || !text) return;
+  warmQ.push([text, lang]); pumpWarm();
+}
+function pumpWarm(){
+  while (warmBusy < 3 && warmQ.length){
+    const [t, l] = warmQ.shift(); warmBusy++;
+    oaTTS(t, l).catch(() => {}).finally(() => { warmBusy--; pumpWarm(); });
+  }
+}
+function warmWord(w){
+  if (!w) return;
+  if (db.settings.hints && w.hint) warm(wordLine(w), 'uk-UA'); else warm(speakable(w.uk), 'uk-UA');
+  warm(w.en[0], EN());
+}
+function warmPhrases(){
+  [...PRAISE, ...WRONG, ...DUNNO, ...REPEAT_OK, ...REPEAT_LATER, ...Object.values(STREAK)].forEach(t => warm(t, 'uk-UA'));
+}
 async function sayWord(w, prefix = ''){
   if (prefix) { await speak(prefix, 'uk-UA'); await wait(150); }
-  await speak(speakable(w.uk), 'uk-UA');
-  if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), 'uk-UA'); }
+  if (oaOn('oaVoice') && db.settings.hints && w.hint) await speak(wordLine(w), 'uk-UA');
+  else {
+    await speak(speakable(w.uk), 'uk-UA');
+    if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), 'uk-UA'); }
+  }
   if (needsLetter(w)){ await wait(250); await sayLetter(w); }
 }
 
@@ -877,7 +905,7 @@ async function presentItem(){
   if (!alive(step)) return;
   await sayWord(w);
   const nx = session.queue[session.i + 1] && db.words.find(x => x.id === session.queue[session.i + 1].id);
-  if (nx){ prefetchSpeech(speakable(nx.uk), 'uk-UA'); if (db.settings.hints && nx.hint) prefetchSpeech(speakable(nx.hint), 'uk-UA'); prefetchSpeech(nx.en[0], EN()); }
+  for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); }
   if (!alive(step)) return;
   if (session.tapMode) setStatus('Натисніть мікрофон і скажіть переклад');
   else listenLoop(step);
@@ -1269,7 +1297,7 @@ function renderOA(){
   $('oaVoiceName').value = db.settings.oaVoiceName || 'coral';
   $('oaVoice').value = db.settings.oaVoice === false ? '0' : '1';
   $('oaEars').value = db.settings.oaEars === false ? '0' : '1';
-  $('oaModel').value = db.settings.oaModel || 'gpt-4o-mini-transcribe';
+  $('oaModel').value = db.settings.oaModel || 'gpt-4o-transcribe';
   if (!has) $('oaStatus').textContent = '';
 }
 $('oaSave').onclick = async () => {
