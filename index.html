@@ -134,7 +134,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v19</span></h1>
+    <h1 class="brand"><span class="badge"><span class="av">AV</span><img class="wordmark" src="wordmark.png" alt="ENGLISH" width="150" height="40"></span><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.7rem">v20</span></h1>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
@@ -267,6 +267,16 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
         <button class="chip" data-f="known" aria-pressed="false">Вивчені</button>
       </div>
       <ul class="list" id="list"></ul>
+    </div>
+    <div class="panel">
+      <h2>Пояснення до слів</h2>
+      <p class="small muted">OpenAI напише коротке пояснення українською до кожного слова без пояснення, щоб не плутати синоніми. Пояснення зберігаються назавжди і їх можна редагувати. Для всього словника це коштує кілька центів.</p>
+      <div class="row">
+        <button class="btn primary" id="hintsBtn">Написати пояснення</button>
+        <select id="hintsScope" class="pack-select" style="padding:8px 10px"><option value="active">Для моїх рівнів</option><option value="all">Для всіх слів</option></select>
+      </div>
+      <p class="small" id="hintsOut" style="margin-bottom:0"></p>
+      <div class="setting"><span>Писати пояснення автоматично під час сесії</span><select id="autoHints"><option value="1">Так</option><option value="0">Ні</option></select></div>
     </div>
     <div class="panel">
       <h2>Резервна копія</h2>
@@ -656,6 +666,53 @@ async function listen(timeoutMs = 9000){
   return listenDevice(timeoutMs);
 }
 
+/* ---------- Short Ukrainian explanations written by OpenAI (saved into the word) ---------- */
+let chatModel = null;
+async function pickChatModel(){
+  if (chatModel) return chatModel;
+  const r = await fetch(OA + '/models', { headers: { 'Authorization': 'Bearer ' + db.settings.oaKey } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const ids = ((await r.json()).data || []).map(m => m.id);
+  const bad = /audio|tts|transcribe|realtime|search|image|embed|moderation|whisper|dall|codex|instruct/;
+  const pref = ['gpt-5-mini','gpt-5.1-mini','gpt-5.2-mini','gpt-4.1-mini','gpt-4o-mini'];
+  chatModel = pref.find(p => ids.includes(p)) || ids.filter(i => /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.find(i => /^gpt/.test(i) && !bad.test(i));
+  if (!chatModel) throw new Error('немає моделі');
+  return chatModel;
+}
+async function writeHints(words){
+  const model = await pickChatModel();
+  const items = words.map(w => ({ id: w.id, uk: w.uk, en: w.en.join(', ') }));
+  const prompt = 'Ти допомагаєш українцю вчити англійські слова. Для кожного слова напиши дуже коротке пояснення українською (2–6 слів), ' +
+    'щоб було зрозуміло, яке саме англійське слово мається на увазі, і його не можна було сплутати з синонімами. ' +
+    'Використовуй уточнювальні синоніми, відтінок значення або типову ситуацію. Приклад: «чудовий» для magnificent — «величний, вражаючий розмахом»; для terrific — «просто відмінний, про враження». ' +
+    'НЕ пиши англійське слово, його частини чи першу літеру. Не повторюй сам український переклад. Без лапок. ' +
+    'Відповідай лише JSON-об\'єктом {"id": "пояснення", ...}.\n' + JSON.stringify(items);
+  const r = await fetch(OA + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 6000 })
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+  const j = await r.json();
+  const txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').replace(/```json|```/g, '').trim();
+  const map = JSON.parse(txt);
+  let n = 0;
+  words.forEach(w => {
+    let h = (map[w.id] || '').toString().trim().replace(/^["«]|["»]$/g, '');
+    if (h && !w.en.some(e => h.toLowerCase().includes(e.toLowerCase()))){ w.hint = h; w.hintAuto = true; n++; }
+  });
+  save();
+  return n;
+}
+// make sure the words of this session have explanations before they are spoken
+async function ensureHints(ids){
+  if (!db.settings.oaKey || db.settings.autoHints === false) return;
+  const need = ids.map(id => db.words.find(w => w.id === id)).filter(w => w && !w.hint).slice(0, 60);
+  for (let i = 0; i < need.length; i += 30){
+    try { await writeHints(need.slice(i, i + 30)); } catch(e){ console.warn(e); return; }
+  }
+}
+
 /* ---------- Answer checking ---------- */
 function meanings(w){ return w.uk.toLowerCase().replace(/\([^)]*\)/g,'').split(/,| чи /).map(s=>s.trim()).filter(Boolean); }
 function synonymHit(heard, w){
@@ -732,7 +789,7 @@ function greeting(){
   return h < 5 ? 'Доброї ночі!' : h < 12 ? 'Доброго ранку!' : h < 18 ? 'Добрий день!' : 'Добрий вечір!';
 }
 
-function startSession(){
+async function startSession(){
   const fresh = newWords().slice(0, db.settings.newPer);
   const due = dueWords();
   const queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
@@ -741,6 +798,13 @@ function startSession(){
   show('session'); keepAwake();
   $('word').textContent = ''; $('hint').textContent = '';
   session.streak = 0;
+  const step0 = session.step;
+  if (db.settings.oaKey && db.settings.autoHints !== false && queue.some(q => { const w = db.words.find(x => x.id === q.id); return w && !w.hint; })){
+    setStatus('Готую пояснення до слів…');
+    await Promise.race([ensureHints(queue.slice(0, 30).map(q => q.id)), wait(25000)]);
+    if (!session || session.step !== step0) return;
+    ensureHints(queue.slice(30).map(q => q.id));   // the rest in the background
+  }
   const intro = greeting() + ' ' + (fresh.length ? 'Я називаю слово, а ви перекладаєте англійською. Поїхали!' : 'Сьогодні повторюємо. Поїхали!');
   setStatus(intro);
   const step = session.step;
@@ -760,7 +824,7 @@ function hasTwins(w){
   return db.words.some(x => x.id !== w.id && (x.pack || 'mine') === (w.pack || 'mine') && meanings(x).some(k => m.includes(k)));
 }
 function needsLetter(w){
-  const mode = db.settings.letterCue || 'nohint';
+  const mode = db.settings.letterCue || 'off';
   if (mode === 'off') return false;
   if (mode === 'always') return true;
   if (mode === 'twins') return hasTwins(w);
@@ -1163,7 +1227,7 @@ function renderStart(){
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
   $('setSecond').value = db.settings.choices === false ? '0' : '1';
-  $('setLetter').value = db.settings.letterCue || 'nohint';
+  $('setLetter').value = db.settings.letterCue || 'off';
   renderOA();
   $('setAccent').value = EN();
   [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
@@ -1256,16 +1320,20 @@ function renderList(){
   $('list').innerHTML = items.length ? items.map(w => `
     <li><span class="dot ${status(w)}" title="${{new:'Нове',weak:'Погано знаю',learning:'Вчу',known:'Вивчене'}[status(w)]}"></span>
       <div class="txt"><div class="uk">${esc(w.uk)} <span class="tag">${PACK_SHORT[w.pack || 'mine']}</span></div><div class="en">${esc(w.en.join(', '))}</div>${w.hint ? `<div class="hn">${esc(w.hint)}</div>` : ''}</div>
+      <button class="icon-btn" data-edit="${w.id}" aria-label="Змінити пояснення" title="Змінити пояснення">✎</button>
       <button class="icon-btn" data-reset="${w.id}" aria-label="Почати вчити заново" title="Почати вчити заново">↺</button>
       <button class="icon-btn" data-del="${w.id}" aria-label="Видалити" title="Видалити">×</button></li>`).join('')
     : `<li class="muted">${q || filter!=='all' ? 'Нічого не знайдено.' : 'Список порожній. Додайте перше слово вище.'}</li>`;
 }
 $('list').onclick = e => {
+  const ed = e.target.dataset.edit;
+  if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ const h = prompt('Коротке пояснення до «' + w.uk + '» (' + w.en[0] + '):', w.hint || ''); if (h !== null){ w.hint = h.trim(); w.hintAuto = false; save(); renderList(); } } return; }
   const del = e.target.dataset.del, rs = e.target.dataset.reset;
   if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Видалити «${w.uk}»?`)){ db.words = db.words.filter(x=>x.id!==del); save(); renderList(); } }
   if (rs){ const w = db.words.find(x=>x.id===rs); if (w){ Object.assign(w,{box:0,seen:false,due:0,weak:false}); save(); renderList(); toast('Слово знову серед нових'); } }
 };
 $('search').oninput = renderList;
+$('autoHints').value = db.settings.autoHints === false ? '0' : '1';
 $('packFilter').onchange = renderList;
 document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
   filter = c.dataset.f; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x===c)); renderList();
@@ -1299,6 +1367,25 @@ $('bulkBtn').onclick = () => {
   if (n) $('bulk').value = '';
   toast(`Додано: ${n}` + (bad ? `. Пропущено рядків: ${bad}` : ''));
 };
+let hintsRunning = false;
+$('hintsBtn').onclick = async () => {
+  const out = $('hintsOut');
+  if (!db.settings.oaKey){ out.textContent = 'Спершу вставте ключ OpenAI на головному екрані.'; return; }
+  if (hintsRunning){ hintsRunning = false; return; }
+  const list = ($('hintsScope').value === 'all' ? db.words : activeWords()).filter(w => !w.hint);
+  if (!list.length){ out.textContent = 'У всіх слів уже є пояснення.'; return; }
+  hintsRunning = true; $('hintsBtn').textContent = 'Зупинити';
+  let done = 0, fails = 0;
+  for (let i = 0; i < list.length && hintsRunning; i += 30){
+    out.textContent = `Пишу пояснення… ${done} з ${list.length}`;
+    try { done += await writeHints(list.slice(i, i + 30)); fails = 0; }
+    catch(e){ if (++fails >= 3){ out.textContent = 'Помилка OpenAI: ' + e.message; break; } i -= 30; await wait(2000); }
+  }
+  if (!fails) out.textContent = `Готово: написано ${done} пояснень.`;
+  hintsRunning = false; $('hintsBtn').textContent = 'Написати пояснення';
+  renderList();
+};
+$('autoHints').onchange = e => { db.settings.autoHints = e.target.value === '1'; save(); };
 $('exportBtn').onclick = async () => {
   const text = JSON.stringify({ ...db, settings: { ...db.settings, oaKey: undefined } });
   try { await navigator.clipboard.writeText(text); toast('Копію скопійовано. Збережіть її в нотатках'); }
