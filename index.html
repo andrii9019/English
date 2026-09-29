@@ -51,6 +51,19 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;fle
 .lang-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:16px 18px;font-size:1.15rem;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:inherit;cursor:pointer;text-align:left}
 .lang-btn small{opacity:.6;font-size:.85rem}
 .lang-btn.suggested{border-color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset}
+.set-label{margin:14px 0 2px;font-weight:600;font-size:.9rem;opacity:.75}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary>span{display:flex;flex-direction:column;gap:2px}
+details.fold>summary b{font-size:1.05rem}
+details.fold>summary small{opacity:.6;font-size:.82rem}
+details.fold>summary::after{content:'›';font-size:1.5rem;opacity:.6;transition:transform .2s}
+details.fold[open]>summary::after{transform:rotate(90deg)}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.lang-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:inherit;font:600 .85rem var(--body);cursor:pointer;flex:none}
+.lang-chip svg{opacity:.85}
+.lang-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:inherit;font-size:1.3rem;cursor:pointer}
+.lang-btn.current{border-color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset}
 .brand-icon{height:30px;width:auto;display:block;filter:drop-shadow(0 0 8px rgba(29,233,182,.35))}
 .brand-word{height:22px;width:auto;display:block}
 .brand-name{font-family:var(--display);font-weight:700;font-size:1.6rem;letter-spacing:-.01em;background:linear-gradient(180deg,#fff,#9ff5e2);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -151,7 +164,10 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v36</span></h1>
+    <div class="brand-row">
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v38</span></h1>
+      <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
+    </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-tab="practice">Practice</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="words">Words</button>
@@ -250,72 +266,73 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
   <!-- SETTINGS -->
   <section id="view-settings" hidden>
     <div class="panel">
-      <p class="small muted" id="support"></p>
-      <div class="row">
-        <button class="btn ghost" id="soundTest" style="flex:1">Test sound</button>
-        <button class="btn ghost" id="micTest" style="flex:1">Test microphone</button>
-      </div>
-      <p class="small" id="micTestOut" style="margin-bottom:0"></p>
-    </div>
-    <div class="panel">
-      <h2 class="small" style="margin:0 0 4px;font-size:1rem">OpenAI: natural voice and better recognition</h2>
-      <p class="small muted" style="margin:0 0 10px">The key is stored only on this phone and is never included in backups. Without a key the phone's built-in voice is used.</p>
-      <div class="row" style="flex-wrap:nowrap">
-        <input type="password" id="oaKey" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="btn primary" id="oaSave">Save</button>
-      </div>
-      <p class="small" id="oaStatus" style="margin:8px 0 0"></p>
-      <div id="oaOpts">
-        <div class="setting"><span>Voice</span><span class="row" style="flex-wrap:nowrap">
-          <select id="oaVoiceName" class="voice-sel"><option value="coral">Coral · warm</option><option value="nova">Nova · upbeat</option><option value="shimmer">Shimmer · soft</option><option value="sage">Sage · calm</option><option value="ballad">Ballad · expressive</option><option value="alloy">Alloy · neutral</option><option value="ash">Ash · male</option><option value="echo">Echo · male</option><option value="onyx">Onyx · deep male</option><option value="verse">Verse · lively male</option></select>
-          <button class="icon-btn" id="oaTry" aria-label="Play">▶</button></span></div>
-        <div class="setting"><span>Natural voice</span><select id="oaVoice"><option value="1">On</option><option value="0">Off</option></select></div>
-        <div class="setting"><span>Recognition</span><select id="oaEars"><option value="1">On</option><option value="0">Off</option></select></div>
-        <div class="setting"><span>Accuracy</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-transcribe">Highest (recommended)</option><option value="gpt-4o-mini-transcribe">Standard · cheaper</option></select></div>
-      </div>
-    </div>
-    <div class="panel">
+      <h2>Learning</h2>
+      <div class="setting"><span>Your language</span><select id="setNative"></select></div>
       <div class="setting"><span>New words per session</span>
         <select id="setNew"><option>5</option><option>10</option><option>15</option><option>20</option><option>30</option></select></div>
+      <p class="set-label">Levels</p>
       <div id="packRows"></div>
-      <div class="setting"><span>Voice: your language</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Play">▶</button></span></div>
+    </div>
+    <div class="panel">
+      <h2>Sound</h2>
+      <div class="setting"><span id="voiceUkLabel">Voice: your language</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Play">▶</button></span></div>
       <div class="setting"><span>Voice: English</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Play">▶</button></span></div>
-      <div class="setting"><span>Hint: first letter</span>
-        <select id="setLetter"><option value="nohint">If no explanation</option><option value="twins">Only for synonyms</option><option value="always">Always</option><option value="off">Never</option></select></div>
-      <div class="setting"><span>Your language</span>
-        <select id="setNative"></select></div>
-      <div class="setting"><span>How to answer</span>
-        <select id="setMode"><option value="pick">Pick from 3 similar options</option><option value="voice">By voice</option></select></div>
-      <div class="setting"><span>Show options if not heard</span>
-        <select id="setSecond"><option value="1">Yes</option><option value="0">No</option></select></div>
       <div class="setting"><span>English accent</span>
         <select id="setAccent"><option value="en-US">American</option><option value="en-GB">British</option></select></div>
       <div class="setting"><span>Speech speed</span>
         <select id="setRate"><option value="0.9">Slower</option><option value="1">Normal</option><option value="1.1">Faster</option></select></div>
       <div class="setting"><span>Read explanations aloud</span>
         <select id="setHints"><option value="1">Yes</option><option value="0">No</option></select></div>
+      <button class="btn ghost" id="soundTest" style="width:100%;margin-top:12px">Test sound</button>
+      <p class="small muted" id="support" style="margin:8px 0 0"></p>
+      <p class="small" id="micTestOut" style="margin:6px 0 0"></p>
     </div>
-    <div class="panel">
-      <h2>Word explanations</h2>
-      <p class="small muted">OpenAI writes a short explanation in your language for every word that has none, so synonyms don't get mixed up. Explanations are saved and can be edited. The whole dictionary costs a few cents.</p>
+    <details class="panel fold">
+      <summary><span><b>Natural voice</b><small>Optional · uses your OpenAI key</small></span></summary>
+      <p class="small muted" style="margin:10px 0">A more natural, human-sounding voice. The key is stored only on this phone and is never included in backups. Without a key the phone's built-in voice is used.</p>
+      <div class="row" style="flex-wrap:nowrap">
+        <input type="password" id="oaKey" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn primary" id="oaSave">Save</button>
+      </div>
+      <p class="small" id="oaStatus" style="margin:8px 0 0"></p>
+      <div id="oaOpts">
+        <div class="setting"><span>Natural voice</span><select id="oaVoice"><option value="1">On</option><option value="0">Off</option></select></div>
+        <div class="setting"><span>Voice</span><span class="row" style="flex-wrap:nowrap">
+          <select id="oaVoiceName" class="voice-sel"><option value="coral">Coral · warm</option><option value="nova">Nova · upbeat</option><option value="shimmer">Shimmer · soft</option><option value="sage">Sage · calm</option><option value="ballad">Ballad · expressive</option><option value="alloy">Alloy · neutral</option><option value="ash">Ash · male</option><option value="echo">Echo · male</option><option value="onyx">Onyx · deep male</option><option value="verse">Verse · lively male</option></select>
+          <button class="icon-btn" id="oaTry" aria-label="Play">▶</button></span></div>
+      </div>
+    </details>
+    <details class="panel fold">
+      <summary><span><b>Word explanations</b><small>Optional · uses your OpenAI key</small></span></summary>
+      <p class="small muted" style="margin:10px 0">Short hints in your language so similar words don't get mixed up. The whole dictionary costs a few cents.</p>
       <div class="row">
         <button class="btn primary" id="hintsBtn">Write explanations</button>
         <select id="hintsScope" class="pack-select" style="padding:8px 10px"><option value="active">For my levels</option><option value="all">For all words</option><option value="redo">Rewrite automatic ones</option></select>
       </div>
       <p class="small" id="hintsOut" style="margin-bottom:0"></p>
-      <div class="setting"><span>Write explanations automatically during sessions</span><select id="autoHints"><option value="1">Yes</option><option value="0">No</option></select></div>
-    </div>
-    <div class="panel">
-      <h2>Backup</h2>
-      <p class="small muted">Words and progress are stored only on this device. Save a backup so you don't lose them.</p>
+      <div class="setting"><span>Write automatically during sessions</span><select id="autoHints"><option value="1">Yes</option><option value="0">No</option></select></div>
+    </details>
+    <details class="panel fold">
+      <summary><span><b>Backup</b><small>Save or restore your words and progress</small></span></summary>
+      <p class="small muted" style="margin:10px 0">Words and progress are stored only on this device.</p>
       <div class="row">
         <button class="btn" id="exportBtn">Copy backup</button>
         <button class="btn" id="importBtn">Restore backup</button>
       </div>
+    </details>
+    <!-- retired voice-answer controls, kept so older code paths stay safe -->
+    <div hidden>
+      <button id="micTest"></button>
+      <select id="oaEars"><option value="1">On</option><option value="0">Off</option></select>
+      <select id="oaModel"><option value="gpt-4o-transcribe">x</option></select>
+      <select id="setLetter"><option value="off">Never</option><option value="nohint">x</option><option value="twins">x</option><option value="always">x</option></select>
+      <select id="setMode"><option value="pick">pick</option></select>
+      <select id="setSecond"><option value="1">Yes</option><option value="0">No</option></select>
     </div>
   </section>
 </div>
 <div class="lang-pick" id="langPick" hidden>
+  <button class="lang-close" id="langClose" aria-label="Close" hidden>×</button>
   <div class="lang-box">
     <img src="logo-96.png?v=2" alt="" class="lang-logo">
     <h2>Rehearsal</h2>
@@ -390,13 +407,13 @@ const PACKS = {"b1":[["позичати (комусь)","lend"],["позичат
 const PACK_VERSION = 2;
 /* ---------- Native languages (the language you learn FROM) ---------- */
 const NATIVES = {
-  uk: { name: 'Українська', en: 'Ukrainian',  tts: 'uk-UA', ready: true,  or: 'або', hello: 'Привіт! Я допоможу вам вивчати англійські слова.', test: 'Привіт! Так звучить цей голос.' },
-  es: { name: 'Español',    en: 'Spanish',    tts: 'es-ES', ready: true, or: 'o',   hello: '¡Hola! Te ayudaré a aprender palabras en inglés.', test: '¡Hola! Así suena esta voz.' },
-  pt: { name: 'Português',  en: 'Portuguese', tts: 'pt-BR', ready: true, or: 'ou',  hello: 'Olá! Vou te ajudar a aprender palavras em inglês.', test: 'Olá! É assim que esta voz soa.' },
-  tr: { name: 'Türkçe',     en: 'Turkish',    tts: 'tr-TR', ready: true, or: 'veya', hello: 'Merhaba! İngilizce kelimeler öğrenmene yardım edeceğim.', test: 'Merhaba! Bu ses böyle duyuluyor.' },
-  id: { name: 'Bahasa Indonesia', en: 'Indonesian', tts: 'id-ID', ready: true, or: 'atau', hello: 'Halo! Saya akan membantumu belajar kata bahasa Inggris.', test: 'Halo! Beginilah suara ini.' },
-  hi: { name: 'हिन्दी',        en: 'Hindi',      tts: 'hi-IN', ready: true, or: 'या',  hello: 'नमस्ते! मैं आपको अंग्रेज़ी शब्द सीखने में मदद करूँगा।', test: 'नमस्ते! यह आवाज़ ऐसी सुनाई देती है।' },
-  vi: { name: 'Tiếng Việt', en: 'Vietnamese', tts: 'vi-VN', ready: true, or: 'hoặc', hello: 'Xin chào! Tôi sẽ giúp bạn học từ tiếng Anh.', test: 'Xin chào! Đây là giọng nói này.' }
+  uk: { short: 'УКР', name: 'Українська', en: 'Ukrainian',  tts: 'uk-UA', ready: true,  or: 'або', hello: 'Привіт! Я допоможу вам вивчати англійські слова.', test: 'Привіт! Так звучить цей голос.' },
+  es: { short: 'ES', name: 'Español',    en: 'Spanish',    tts: 'es-ES', ready: true, or: 'o',   hello: '¡Hola! Te ayudaré a aprender palabras en inglés.', test: '¡Hola! Así suena esta voz.' },
+  pt: { short: 'PT', name: 'Português',  en: 'Portuguese', tts: 'pt-BR', ready: true, or: 'ou',  hello: 'Olá! Vou te ajudar a aprender palavras em inglês.', test: 'Olá! É assim que esta voz soa.' },
+  tr: { short: 'TR', name: 'Türkçe',     en: 'Turkish',    tts: 'tr-TR', ready: true, or: 'veya', hello: 'Merhaba! İngilizce kelimeler öğrenmene yardım edeceğim.', test: 'Merhaba! Bu ses böyle duyuluyor.' },
+  id: { short: 'ID', name: 'Bahasa Indonesia', en: 'Indonesian', tts: 'id-ID', ready: true, or: 'atau', hello: 'Halo! Saya akan membantumu belajar kata bahasa Inggris.', test: 'Halo! Beginilah suara ini.' },
+  hi: { short: 'हिन्दी', name: 'हिन्दी',        en: 'Hindi',      tts: 'hi-IN', ready: true, or: 'या',  hello: 'नमस्ते! मैं आपको अंग्रेज़ी शब्द सीखने में मदद करूँगा।', test: 'नमस्ते! यह आवाज़ ऐसी सुनाई देती है।' },
+  vi: { short: 'VI', name: 'Tiếng Việt', en: 'Vietnamese', tts: 'vi-VN', ready: true, or: 'hoặc', hello: 'Xin chào! Tôi sẽ giúp bạn học từ tiếng Anh.', test: 'Xin chào! Đây là giọng nói này.' }
 };
 const NATIVE = () => NATIVES[NATIVE_CODE] || NATIVES.uk;
 const NL = () => NATIVE().tts;
@@ -1127,7 +1144,7 @@ async function listenLoop(step){
 
 /* ---------- Multiple choice when the recogniser is unsure ---------- */
 /* ---------- Pick mode: say the word, show 3 look-alike options ---------- */
-const pickMode = () => (db.settings.mode || 'pick') === 'pick';
+const pickMode = () => true;   // the app reads the word, you choose one of 3 options
 function lev(a, b){
   if (a === b) return 0; const m = a.length, n = b.length; if (!m || !n) return m || n;
   let prev = Array.from({ length: n + 1 }, (_, j) => j);
@@ -1487,7 +1504,7 @@ function renderStart(){
   $('plan').textContent = (fresh || due) ? `Today: ${fresh} new words and ${due} to review.` : 'All done for today. Add new words or come back tomorrow.';
   $('startBtn').disabled = !(fresh || due);
   const notes = [];
-  if (!SR && !oaOn('oaEars')) notes.push('This browser cannot recognise speech. Chrome works best.');
+  if (!SR && !oaOn('oaEars')) void 0;
   if (!hasTTS) notes.push('Speech is not available in this browser.');
   else if (voices.length && !pickVoice(NL())) notes.push('No voice found for your language. Install it in your phone\'s text-to-speech settings.');
   $('support').textContent = notes.join(' ');
@@ -1691,14 +1708,18 @@ $('importBtn').onclick = () => {
 
 /* ---------- First launch: choose your language ---------- */
 function showLangPicker(){
-  const guess = (navigator.languages || [navigator.language || '']).map(l => String(l).slice(0, 2).toLowerCase()).find(l => NATIVES[l] && NATIVES[l].ready);
+  const fromChip = !FIRST_RUN;
+  const guess = fromChip ? NATIVE_CODE
+    : (navigator.languages || [navigator.language || '']).map(l => String(l).slice(0, 2).toLowerCase()).find(l => NATIVES[l] && NATIVES[l].ready);
   const order = Object.keys(NATIVES).filter(k => NATIVES[k].ready).sort((a, b) => (b === guess) - (a === guess));
-  $('langList').innerHTML = order.map(k => `<button class="lang-btn${k === guess ? ' suggested' : ''}" data-lang="${k}"><span>${esc(NATIVES[k].name)}</span><small>${esc(NATIVES[k].en)}</small></button>`).join('');
+  $('langList').innerHTML = order.map(k => `<button class="lang-btn${k === guess ? (fromChip ? ' current' : ' suggested') : ''}" data-lang="${k}"><span>${esc(NATIVES[k].name)}</span><small>${k === guess && fromChip ? '✓ ' : ''}${esc(NATIVES[k].en)}</small></button>`).join('');
+  $('langClose').hidden = !fromChip;
   $('langList').querySelectorAll('.lang-btn').forEach(b => b.onclick = async () => {
     const lang = b.dataset.lang;
+    if (fromChip && lang === NATIVE_CODE){ $('langPick').hidden = true; return; }
     $('langList').querySelectorAll('.lang-btn').forEach(x => x.disabled = true);
     b.querySelector('small').textContent = 'Loading…';
-    if (lang === 'uk'){
+    if (!fromChip && lang === 'uk'){
       db.settings.packs = { mine: false, b1: true, b2: false };   // a new learner starts at Level 1
       save();
       try { localStorage.setItem(KEY_NATIVE, 'uk'); localStorage.removeItem('rehearsal:pending'); } catch(e){}
@@ -1711,6 +1732,10 @@ function showLangPicker(){
   });
   $('langPick').hidden = false;
 }
+$('langChipText').textContent = NATIVE().short;
+$('voiceUkLabel').textContent = 'Voice: ' + NATIVE().name;
+$('langChip').onclick = () => { if (!session) showLangPicker(); else toast('Finish the session first'); };
+$('langClose').onclick = () => { $('langPick').hidden = true; };
 
 /* ---------- Init ---------- */
 renderStart();
