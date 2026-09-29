@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -41,6 +41,16 @@ button{cursor:pointer}
 .wrap{max-width:560px;margin:0 auto;padding:16px 18px 40px}
 
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.lang-pick{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px calc(env(safe-area-inset-bottom,0px) + 20px);overflow-y:auto}
+.lang-pick[hidden]{display:none}
+.lang-box{width:100%;max-width:420px;text-align:center}
+.lang-logo{height:54px;width:auto;margin:0 auto 6px;display:block;filter:drop-shadow(0 0 12px rgba(29,233,182,.4))}
+.lang-box h2{margin:0 0 6px}
+.lang-box p{margin:0 0 18px}
+.lang-list{display:grid;gap:10px}
+.lang-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:16px 18px;font-size:1.15rem;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:inherit;cursor:pointer;text-align:left}
+.lang-btn small{opacity:.6;font-size:.85rem}
+.lang-btn.suggested{border-color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset}
 .brand-icon{height:30px;width:auto;display:block;filter:drop-shadow(0 0 8px rgba(29,233,182,.35))}
 .brand-word{height:22px;width:auto;display:block}
 .brand-name{font-family:var(--display);font-weight:700;font-size:1.6rem;letter-spacing:-.01em;background:linear-gradient(180deg,#fff,#9ff5e2);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -141,10 +151,10 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v28</span></h1>
+    <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v36</span></h1>
     <nav class="tabs" role="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-tab="practice">Практика</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="words">Слова</button>
+      <button class="tab" role="tab" aria-selected="true" data-tab="practice">Practice</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="words">Words</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="settings">Settings</button>
     </nav>
   </header>
@@ -156,8 +166,8 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
     </div>
     <div class="panel">
       <p id="plan" style="margin-top:0"></p>
-      <button class="btn big" id="installBtn" hidden style="margin-bottom:10px">Встановити як додаток</button>
-      <button class="btn primary big" id="startBtn">Почати</button>
+      <button class="btn big" id="installBtn" hidden style="margin-bottom:10px">Install app</button>
+      <button class="btn primary big" id="startBtn">Start</button>
     </div>
   </section>
 
@@ -169,25 +179,25 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div class="word" id="word" aria-live="polite"></div>
       <div class="hint" id="hint"></div>
       <div class="status" id="status" aria-live="polite"></div>
-      <button class="mic" id="mic" aria-label="Слухати відповідь">
+      <button class="mic" id="mic" aria-label="Listen for answer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
       </button>
       <div class="wave" aria-hidden="true"><svg viewBox="0 0 400 22" preserveAspectRatio="none"><path d="M0 11 Q25 1 50 11 T100 11 T150 11 T200 11 T250 11 T300 11 T350 11 T400 11"/></svg></div>
       <div class="choices" id="choices"></div>
       <div class="feedback" id="feedback"></div>
       <form class="typed" id="typedForm">
-        <input type="text" id="typedInput" placeholder="Переклад англійською" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="btn primary" type="submit">Перевірити</button>
+        <input type="text" id="typedInput" placeholder="English translation" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn primary" type="submit">Check</button>
       </form>
       <div class="row center">
-        <button class="btn" id="repeatBtn">Повторити слово</button>
-        <button class="btn" id="dunnoBtn">Не знаю</button>
-        <button class="btn" id="typeBtn">Ввести текстом</button>
-        <button class="btn" id="pauseBtn">Пауза</button>
+        <button class="btn" id="repeatBtn">Repeat word</button>
+        <button class="btn" id="dunnoBtn">I don't know</button>
+        <button class="btn" id="typeBtn">Type instead</button>
+        <button class="btn" id="pauseBtn">Pause</button>
       </div>
     </div>
-    <p class="small muted" style="text-align:center">Голосові команди: «repeat» — повторити, «hint» — підказка, «I don't know» — не знаю, «stop» — пауза</p>
-    <button class="btn ghost big" id="endBtn">Завершити сесію</button>
+    <p class="small muted" id="cmdHint" style="text-align:center">Voice commands: “repeat”, “hint”, “I don't know”, “stop”</p>
+    <button class="btn ghost big" id="endBtn">End session</button>
   </section>
 
   <!-- PRACTICE: summary -->
@@ -196,42 +206,42 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <h2 id="sumTitle"></h2>
       <p id="sumText" class="muted"></p>
       <ul class="mistakes" id="sumList"></ul>
-      <button class="btn primary big" id="againBtn">На головну</button>
+      <button class="btn primary big" id="againBtn">Home</button>
     </div>
   </section>
 
   <!-- WORDS -->
   <section id="view-words" class="words" hidden>
     <div class="panel">
-      <h2>Додати слово</h2>
+      <h2>Add a word</h2>
       <form id="addForm">
-        <label for="addUk">Українською</label>
+        <label for="addUk">In your language</label>
         <input type="text" id="addUk" required autocomplete="off">
-        <label for="addEn">Переклад англійською (кілька варіантів через кому)</label>
+        <label for="addEn">English translation (several options separated by commas)</label>
         <input type="text" id="addEn" required autocomplete="off" autocapitalize="off" placeholder="thorough, meticulous">
-        <label for="addHint">Коротке пояснення українською (необов'язково)</label>
-        <input type="text" id="addHint" autocomplete="off" placeholder="зроблений дуже уважно, до дрібниць">
-        <div style="margin-top:14px"><button class="btn primary" type="submit">Додати</button></div>
+        <label for="addHint">Short explanation in your language (optional)</label>
+        <input type="text" id="addHint" autocomplete="off" placeholder="done very carefully, down to details">
+        <div style="margin-top:14px"><button class="btn primary" type="submit">Add</button></div>
       </form>
       <details style="margin-top:14px">
-        <summary>Додати списком</summary>
-        <p class="small muted">Один рядок — одне слово: <b>українське = english, варіант | пояснення</b>. Пояснення можна не писати.</p>
-        <textarea id="bulk" placeholder="неминучий = inevitable, unavoidable | те, чого не можна уникнути&#10;вразливий = vulnerable"></textarea>
-        <div style="margin-top:10px"><button class="btn primary" id="bulkBtn">Додати всі</button></div>
+        <summary>Add a list</summary>
+        <p class="small muted">One line per word: <b>your word = english, option | explanation</b>. The explanation is optional.</p>
+        <textarea id="bulk" placeholder="word = inevitable, unavoidable | explanation&#10;word = vulnerable"></textarea>
+        <div style="margin-top:10px"><button class="btn primary" id="bulkBtn">Add all</button></div>
       </details>
     </div>
     <div class="panel">
-      <h2 id="listTitle">Мої слова</h2>
+      <h2 id="listTitle">My words</h2>
       <div class="row" style="flex-wrap:nowrap">
-        <input type="text" id="search" placeholder="Пошук" autocomplete="off">
-        <select id="packFilter" class="pack-select"><option value="all">Усі рівні</option><option value="b1">Рівень 1</option><option value="b2">Рівень 2</option><option value="mine">Рівень 3</option></select>
+        <input type="text" id="search" placeholder="Search" autocomplete="off">
+        <select id="packFilter" class="pack-select"><option value="all">All levels</option><option value="b1">Level 1</option><option value="b2">Level 2</option><option value="mine">Level 3</option></select>
       </div>
-      <div class="filters" role="group" aria-label="Фільтр">
-        <button class="chip" data-f="all" aria-pressed="true">Усі</button>
-        <button class="chip" data-f="weak" aria-pressed="false">Погано знаю</button>
-        <button class="chip" data-f="new" aria-pressed="false">Нові</button>
-        <button class="chip" data-f="learning" aria-pressed="false">Вчу</button>
-        <button class="chip" data-f="known" aria-pressed="false">Вивчені</button>
+      <div class="filters" role="group" aria-label="Filter">
+        <button class="chip" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" data-f="weak" aria-pressed="false">Weak</button>
+        <button class="chip" data-f="new" aria-pressed="false">New</button>
+        <button class="chip" data-f="learning" aria-pressed="false">Learning</button>
+        <button class="chip" data-f="known" aria-pressed="false">Learned</button>
       </div>
       <ul class="list" id="list"></ul>
     </div>
@@ -242,72 +252,91 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
     <div class="panel">
       <p class="small muted" id="support"></p>
       <div class="row">
-        <button class="btn ghost" id="soundTest" style="flex:1">Перевірити звук</button>
-        <button class="btn ghost" id="micTest" style="flex:1">Перевірити мікрофон</button>
+        <button class="btn ghost" id="soundTest" style="flex:1">Test sound</button>
+        <button class="btn ghost" id="micTest" style="flex:1">Test microphone</button>
       </div>
       <p class="small" id="micTestOut" style="margin-bottom:0"></p>
     </div>
     <div class="panel">
-      <h2 class="small" style="margin:0 0 4px;font-size:1rem">OpenAI: живий голос і краще розпізнавання</h2>
-      <p class="small muted" style="margin:0 0 10px">Ключ зберігається лише на цьому телефоні й не потрапляє в копію чи на GitHub. Без ключа працює вбудований голос телефона.</p>
+      <h2 class="small" style="margin:0 0 4px;font-size:1rem">OpenAI: natural voice and better recognition</h2>
+      <p class="small muted" style="margin:0 0 10px">The key is stored only on this phone and is never included in backups. Without a key the phone's built-in voice is used.</p>
       <div class="row" style="flex-wrap:nowrap">
         <input type="password" id="oaKey" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="btn primary" id="oaSave">Зберегти</button>
+        <button class="btn primary" id="oaSave">Save</button>
       </div>
       <p class="small" id="oaStatus" style="margin:8px 0 0"></p>
       <div id="oaOpts">
-        <div class="setting"><span>Який голос</span><span class="row" style="flex-wrap:nowrap">
-          <select id="oaVoiceName" class="voice-sel"><option value="coral">Coral · теплий</option><option value="nova">Nova · бадьорий</option><option value="shimmer">Shimmer · м'який</option><option value="sage">Sage · спокійний</option><option value="ballad">Ballad · виразний</option><option value="alloy">Alloy · нейтральний</option><option value="ash">Ash · чоловічий</option><option value="echo">Echo · чоловічий</option><option value="onyx">Onyx · низький чоловічий</option><option value="verse">Verse · живий чоловічий</option></select>
-          <button class="icon-btn" id="oaTry" aria-label="Прослухати">▶</button></span></div>
-        <div class="setting"><span>Живий голос</span><select id="oaVoice"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
-        <div class="setting"><span>Розпізнавання</span><select id="oaEars"><option value="1">Увімкнено</option><option value="0">Вимкнено</option></select></div>
-        <div class="setting"><span>Точність</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-transcribe">Найвища (рекомендую)</option><option value="gpt-4o-mini-transcribe">Звичайна · дешевше</option></select></div>
+        <div class="setting"><span>Voice</span><span class="row" style="flex-wrap:nowrap">
+          <select id="oaVoiceName" class="voice-sel"><option value="coral">Coral · warm</option><option value="nova">Nova · upbeat</option><option value="shimmer">Shimmer · soft</option><option value="sage">Sage · calm</option><option value="ballad">Ballad · expressive</option><option value="alloy">Alloy · neutral</option><option value="ash">Ash · male</option><option value="echo">Echo · male</option><option value="onyx">Onyx · deep male</option><option value="verse">Verse · lively male</option></select>
+          <button class="icon-btn" id="oaTry" aria-label="Play">▶</button></span></div>
+        <div class="setting"><span>Natural voice</span><select id="oaVoice"><option value="1">On</option><option value="0">Off</option></select></div>
+        <div class="setting"><span>Recognition</span><select id="oaEars"><option value="1">On</option><option value="0">Off</option></select></div>
+        <div class="setting"><span>Accuracy</span><select id="oaModel" class="voice-sel"><option value="gpt-4o-transcribe">Highest (recommended)</option><option value="gpt-4o-mini-transcribe">Standard · cheaper</option></select></div>
       </div>
     </div>
     <div class="panel">
-      <div class="setting"><span>Нових слів за сесію</span>
+      <div class="setting"><span>New words per session</span>
         <select id="setNew"><option>5</option><option>10</option><option>15</option><option>20</option><option>30</option></select></div>
       <div id="packRows"></div>
-      <div class="setting"><span>Голос українською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Прослухати">▶</button></span></div>
-      <div class="setting"><span>Голос англійською</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Прослухати">▶</button></span></div>
-      <div class="setting"><span>Підказка: перша літера</span>
-        <select id="setLetter"><option value="nohint">Якщо немає пояснення</option><option value="twins">Лише для синонімів</option><option value="always">Завжди</option><option value="off">Ніколи</option></select></div>
-      <div class="setting"><span>Як відповідати</span>
-        <select id="setMode"><option value="pick">Вибрати з 3 схожих варіантів</option><option value="voice">Голосом</option></select></div>
-      <div class="setting"><span>Варіанти відповіді, якщо не розчув</span>
-        <select id="setSecond"><option value="1">Так</option><option value="0">Ні</option></select></div>
-      <div class="setting"><span>Англійська вимова</span>
-        <select id="setAccent"><option value="en-US">Американська</option><option value="en-GB">Британська</option></select></div>
-      <div class="setting"><span>Швидкість мовлення</span>
-        <select id="setRate"><option value="0.9">Повільніше</option><option value="1">Звичайна</option><option value="1.1">Швидше</option></select></div>
-      <div class="setting"><span>Озвучувати пояснення</span>
-        <select id="setHints"><option value="1">Так</option><option value="0">Ні</option></select></div>
+      <div class="setting"><span>Voice: your language</span><span class="row" style="flex-wrap:nowrap"><select id="voiceUk" class="voice-sel"></select><button class="icon-btn" id="tryUk" aria-label="Play">▶</button></span></div>
+      <div class="setting"><span>Voice: English</span><span class="row" style="flex-wrap:nowrap"><select id="voiceEn" class="voice-sel"></select><button class="icon-btn" id="tryEn" aria-label="Play">▶</button></span></div>
+      <div class="setting"><span>Hint: first letter</span>
+        <select id="setLetter"><option value="nohint">If no explanation</option><option value="twins">Only for synonyms</option><option value="always">Always</option><option value="off">Never</option></select></div>
+      <div class="setting"><span>Your language</span>
+        <select id="setNative"></select></div>
+      <div class="setting"><span>How to answer</span>
+        <select id="setMode"><option value="pick">Pick from 3 similar options</option><option value="voice">By voice</option></select></div>
+      <div class="setting"><span>Show options if not heard</span>
+        <select id="setSecond"><option value="1">Yes</option><option value="0">No</option></select></div>
+      <div class="setting"><span>English accent</span>
+        <select id="setAccent"><option value="en-US">American</option><option value="en-GB">British</option></select></div>
+      <div class="setting"><span>Speech speed</span>
+        <select id="setRate"><option value="0.9">Slower</option><option value="1">Normal</option><option value="1.1">Faster</option></select></div>
+      <div class="setting"><span>Read explanations aloud</span>
+        <select id="setHints"><option value="1">Yes</option><option value="0">No</option></select></div>
     </div>
     <div class="panel">
-      <h2>Пояснення до слів</h2>
-      <p class="small muted">OpenAI напише коротке пояснення українською до кожного слова без пояснення, щоб не плутати синоніми. Пояснення зберігаються назавжди і їх можна редагувати. Для всього словника це коштує кілька центів.</p>
+      <h2>Word explanations</h2>
+      <p class="small muted">OpenAI writes a short explanation in your language for every word that has none, so synonyms don't get mixed up. Explanations are saved and can be edited. The whole dictionary costs a few cents.</p>
       <div class="row">
-        <button class="btn primary" id="hintsBtn">Написати пояснення</button>
-        <select id="hintsScope" class="pack-select" style="padding:8px 10px"><option value="active">Для моїх рівнів</option><option value="all">Для всіх слів</option><option value="redo">Переписати автоматичні</option></select>
+        <button class="btn primary" id="hintsBtn">Write explanations</button>
+        <select id="hintsScope" class="pack-select" style="padding:8px 10px"><option value="active">For my levels</option><option value="all">For all words</option><option value="redo">Rewrite automatic ones</option></select>
       </div>
       <p class="small" id="hintsOut" style="margin-bottom:0"></p>
-      <div class="setting"><span>Писати пояснення автоматично під час сесії</span><select id="autoHints"><option value="1">Так</option><option value="0">Ні</option></select></div>
+      <div class="setting"><span>Write explanations automatically during sessions</span><select id="autoHints"><option value="1">Yes</option><option value="0">No</option></select></div>
     </div>
     <div class="panel">
-      <h2>Резервна копія</h2>
-      <p class="small muted">Слова й прогрес зберігаються лише на цьому пристрої. Збережіть копію, щоб не втратити їх.</p>
+      <h2>Backup</h2>
+      <p class="small muted">Words and progress are stored only on this device. Save a backup so you don't lose them.</p>
       <div class="row">
-        <button class="btn" id="exportBtn">Скопіювати копію</button>
-        <button class="btn" id="importBtn">Відновити з копії</button>
+        <button class="btn" id="exportBtn">Copy backup</button>
+        <button class="btn" id="importBtn">Restore backup</button>
       </div>
     </div>
   </section>
+</div>
+<div class="lang-pick" id="langPick" hidden>
+  <div class="lang-box">
+    <img src="logo-96.png?v=2" alt="" class="lang-logo">
+    <h2>Rehearsal</h2>
+    <p class="muted">Learn English words from your own language.<br>Choose your language:</p>
+    <div class="lang-list" id="langList"></div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
 /* ---------- Data ---------- */
-const KEY = 'vidlunnia:v1';
+const KEY_NATIVE = 'rehearsal:native';
+const NATIVE_CODE = (() => { try { return localStorage.getItem(KEY_NATIVE) || 'uk'; } catch(e){ return 'uk'; } })();
+const FIRST_RUN = (() => { try {
+  if (localStorage.getItem('rehearsal:pending')) return true;          // closed the app before choosing
+  if (localStorage.getItem(KEY_NATIVE)) return false;
+  if (localStorage.getItem('vidlunnia:v1')) { localStorage.setItem(KEY_NATIVE, 'uk'); return false; }   // existing Ukrainian user
+  localStorage.setItem('rehearsal:pending', '1');
+  return true;
+} catch(e){ return false; } })();
+const KEY = NATIVE_CODE === 'uk' ? 'vidlunnia:v1' : 'rehearsal:' + NATIVE_CODE;   // separate words & progress per language
 const DAY = 86400000;
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60]; // days per level
 const KNOWN_ON_FIRST_SIGHT = 4; // level 4 = 14 days
@@ -359,8 +388,20 @@ const BASE_VERSION = 3; // 1: your list, 2: + recommended words
 
 const PACKS = {"b1":[["позичати (комусь)","lend"],["позичати (у когось)","borrow"],["дозволити собі (фінансово)","afford"],["домовлятися, організовувати","arrange, organize"],["уникати (чогось неприємного)","avoid"],["скаржитися","complain"],["порівнювати","compare"],["описувати","describe"],["пояснювати","explain"],["покращувати","improve"],["збільшувати(ся)","increase"],["зменшувати(ся)","reduce, decrease"],["надавати перевагу","prefer"],["радити, рекомендувати","recommend, advise"],["відмовлятися (від пропозиції)","refuse"],["нагадувати","remind"],["замінювати","replace, substitute"],["вимагати","require, demand"],["реагувати","react, respond"],["пропонувати (ідею)","suggest"],["пропонувати (дати щось)","offer"],["досягати (мети)","achieve"],["захоплюватися (кимось)","admire"],["вибачатися","apologize"],["сперечатися (з кимось)","argue"],["відвідувати (захід)","attend"],["поводитися","behave"],["належати","belong"],["святкувати","celebrate"],["вибирати","choose, pick"],["заслуговувати","deserve"],["розвивати(ся)","develop"],["розчаровувати","disappoint"],["підбадьорювати","encourage"],["очікувати","expect"],["лагодити, ремонтувати","fix, repair"],["пробачати","forgive"],["збирати(ся) разом","gather"],["здогадуватися","guess"],["наймати (на роботу)","hire, employ"],["ранити, завдавати болю","hurt"],["включати (до складу)","include"],["впливати","influence, affect"],["наполягати","insist"],["знайомити, представляти","introduce"],["запрошувати","invite"],["приєднуватися","join"],["керувати, впоратися","manage"],["згадувати (у розмові)","mention"],["сумувати (за кимось)","miss"],["помічати","notice"],["переконувати","persuade, convince"],["готувати(ся)","prepare"],["прикидатися","pretend"],["обіцяти","promise"],["захищати","protect"],["доводити (правоту)","prove"],["усвідомлювати","realize"],["отримувати","receive, get"],["впізнавати","recognize"],["шкодувати (про щось)","regret"],["покладатися на","rely on, depend on"],["залишатися","remain, stay"],["орендувати","rent"],["заощаджувати","save"],["рятувати","rescue"],["ділитися","share"],["розв'язувати (задачу)","solve"],["підтримувати","support"],["виживати","survive"],["погрожувати","threaten"],["попереджати","warn"],["марнувати","waste"],["цікавитися, замислюватися","wonder"],["доступний, наявний","available"],["тривожний","anxious"],["сміливий","brave"],["обережний (уважний)","careful"],["веселий, бадьорий","cheerful"],["спантеличений","confused, puzzled"],["допитливий","curious"],["небезпечний","dangerous"],["розчарований","disappointed"],["присоромлений","embarrassed"],["дуже втомлений","exhausted"],["щедрий","generous"],["чесний","honest"],["ревнивий, заздрісний","jealous"],["самотній","lonely"],["зрілий","mature"],["сучасний","modern"],["вузький","narrow"],["необхідний","necessary"],["знервований","nervous"],["терплячий","patient"],["ввічливий","polite"],["гордий","proud"],["рідкісний","rare"],["відповідальний","responsible"],["грубий, неввічливий","rude"],["егоїстичний","selfish"],["розсудливий","sensible"],["чутливий","sensitive"],["сором'язливий","shy"],["успішний","successful"],["придатний, відповідний","suitable"],["здивований","surprised"],["цінний","valuable"],["заможний","wealthy, rich"],["широкий","wide, broad"],["стурбований","worried"],["перевага","advantage"],["порада","advice"],["згода, угода","agreement"],["запис (до лікаря), зустріч","appointment"],["сварка, суперечка (з кимось)","argument"],["глядачі, аудиторія","audience"],["переконання, віра","belief"],["кар'єра","career"],["століття","century"],["колега","colleague"],["конкуренція, змагання","competition"],["скарга (офіційна)","complaint"],["стан, умова","condition"],["натовп","crowd"],["шкода, пошкодження","damage"],["борг","debt"],["рішення","decision"],["затримка","delay"],["відділ","department"],["довкілля","environment"],["досвід","experience"],["пояснення","explanation"],["страх","fear"],["мета, ціль","goal, aim"],["звичка","habit"],["дохід","income"],["знання","knowledge"],["нестача","lack, shortage"],["багаж","luggage, baggage"],["спогад","memory"],["помилка","mistake"],["сусід","neighbour, neighbor"],["думка (погляд)","opinion"],["терпіння","patience"],["забруднення","pollution"],["населення","population"],["тиск","pressure"],["якість","quality"],["чек, квитанція","receipt"],["стосунки","relationship"],["дослідження","research, study"],["зарплата","salary, wage"],["навичка","skill"],["суспільство","society"],["успіх","success"],["пропозиція (ідея)","suggestion"],["дорожній рух","traffic"],["довіра","trust"],["різноманітність","variety"],["ухвалити рішення","make a decision"],["зробити все можливе","do my best, do your best, do one's best"],["зробити перерву","take a break"],["вчасно (без запізнення)","on time"],["встигнути вчасно","in time"],["спочатку","at first"],["щойно, як тільки","as soon as"],["щоб (з метою)","so that"],["замість","instead of"],["бути схожим на","look like"],["заблукати","get lost"],["передумати","change my mind, change your mind"],["підтримувати зв'язок","keep in touch"],["бережи себе","take care"],["це того варте","it's worth it"],["прибирати (в кімнаті)","tidy up, clean up"],["прати (одяг)","do the laundry, wash clothes"],["прасувати","iron"],["пилосос","vacuum cleaner, hoover"],["посудомийна машина","dishwasher"],["пральна машина","washing machine"],["холодильник","fridge, refrigerator"],["морозильник","freezer"],["духовка","oven"],["раковина","sink"],["кран (водопровідний)","tap, faucet"],["ковдра","blanket, duvet"],["подушка","pillow"],["шухляда","drawer"],["шафа (для одягу)","wardrobe, closet"],["полиця","shelf"],["сходи","stairs"],["горище","attic"],["підвал","basement, cellar"],["сусідство, район","neighbourhood, neighborhood"],["власник житла","landlord"],["орендар","tenant"],["переїжджати (в інше житло)","move house, move"],["комунальні послуги","utilities, bills"],["вмикати","turn on, switch on"],["вимикати","turn off, switch off"],["заряджати (телефон)","charge"],["розетка","socket, outlet"],["лампочка","light bulb, bulb"],["замок (на дверях)","lock"],["ключ (від дверей)","key"],["смітник, сміттєве відро","bin, trash can, rubbish bin"],["викидати (сміття)","throw away, throw out"],["сніданок","breakfast"],["обід (вдень)","lunch"],["вечеря","dinner, supper"],["перекус","snack"],["смачний","delicious, tasty"],["гострий (про їжу)","spicy, hot"],["несолоний, прісний","bland"],["солодкий","sweet"],["кислий","sour"],["смажити","fry"],["пекти (в духовці)","bake"],["варити (у воді)","boil"],["різати (ножем)","cut, chop"],["змішувати","mix"],["рецепт","recipe"],["інгредієнт","ingredient"],["сковорідка","frying pan, pan"],["каструля","saucepan, pot"],["тарілка","plate"],["миска","bowl"],["виделка","fork"],["ложка","spoon"],["ніж","knife"],["чашка","cup, mug"],["замовляти (їжу)","order"],["рахунок (у ресторані)","bill, check"],["чайові","tip"],["вегетаріанець","vegetarian"],["залишки (їжі)","leftovers"],["голодний","hungry"],["спраглий","thirsty"],["ситий","full"],["подорожувати","travel"],["подорож (поїздка)","trip, journey"],["відпустка","holiday, vacation"],["бронювати","book, reserve"],["бронювання","booking, reservation"],["квиток в один бік","one-way ticket, single ticket"],["квиток туди й назад","return ticket, round-trip ticket"],["посадковий талон","boarding pass"],["паспортний контроль","passport control"],["митниця","customs"],["виліт","departure"],["приліт","arrival"],["пересадка (на рейс)","connection, transfer"],["рейс","flight"],["затриманий (про рейс)","delayed"],["скасований","cancelled, canceled"],["валіза","suitcase"],["ручна поклажа","hand luggage, carry-on"],["пункт призначення","destination"],["екскурсія","tour, excursion"],["путівник","guidebook, guide"],["пам'ятка (визначне місце)","sight, landmark"],["сувенір","souvenir"],["реєстрація (в готелі)","check-in"],["виселення (з готелю)","check-out"],["зупинка (автобуса)","bus stop, stop"],["платформа","platform"],["пішохідний перехід","crossing, crosswalk, pedestrian crossing"],["перехрестя","crossroads, intersection"],["світлофор","traffic lights, traffic light"],["затор","traffic jam"],["паркуватися","park"],["водійські права","driving licence, driver's license"],["пасажир","passenger"],["пропустити (автобус, потяг)","miss the bus, miss the train"],["сідати (в транспорт)","get on"],["виходити (з транспорту)","get off"],["підвезти (когось)","give someone a lift, give a ride"],["пішки","on foot"],["за кордоном","abroad"],["іноземець","foreigner"],["місцевий (житель)","local"],["карта (місцевості)","map"],["напрямок","direction"],["поруч, неподалік","nearby, close by"],["далеко","far away"],["перетинати","cross"],["повертати (ліворуч чи праворуч)","turn"],["прямо (вперед)","straight ahead"],["магазин","shop, store"],["продавець","shop assistant, seller"],["покупець","shopper"],["знижка","discount"],["розпродаж","sale"],["ціна","price"],["дорогий","expensive"],["дешевий","cheap"],["безкоштовний","free"],["готівка","cash"],["кредитна картка","credit card"],["решта (гроші)","change"],["повертати гроші","refund"],["приміряти","try on"],["розмір (одягу)","size"],["підходити (за розміром)","fit"],["пасувати (до когось)","suit"],["витрачати (гроші)","spend"],["заробляти","earn"],["банківський рахунок","bank account"],["позика, кредит","loan"],["податок","tax"],["ціна, вартість","cost"],["купівля","purchase"],["черга","queue, line"],["стояти в черзі","wait in line"],["доставка","delivery"],["посилка","parcel, package"],["гаманець","wallet, purse"],["бренд","brand"],["якісний","high-quality"],["вживаний","used"],["новенький","brand new"],["зношений","worn out"],["роботодавець","employer"],["працівник","employee, worker"],["керівник","manager, boss"],["співбесіда","job interview, interview"],["резюме","CV, resume"],["подавати заявку","apply"],["заява (на роботу)","application"],["звільнитися (з роботи)","quit, leave a job"],["звільнити (з роботи)","fire, sack"],["підвищення (на посаді)","promotion"],["підвищення зарплати","pay rise, raise"],["повна зайнятість","full-time"],["неповна зайнятість","part-time"],["понаднормово","overtime"],["зміна (робоча)","shift"],["нарада","meeting"],["завдання","task"],["відповідальність (обов'язки)","duties"],["обов'язок","duty"],["досвідчений","experienced"],["кваліфікований","qualified"],["безробітний","unemployed"],["пенсія","pension"],["на пенсії","retired"],["офіс","office"],["клієнт","client"],["компанія","company, firm"],["навчатися","learn"],["іспит","exam, examination"],["скласти іспит","pass an exam"],["провалити іспит","fail an exam"],["оцінка (в школі)","mark, grade"],["предмет (шкільний)","subject"],["домашнє завдання","homework"],["лекція","lecture"],["викладач","teacher, tutor"],["студент","student"],["університет","university"],["диплом (ступінь)","degree"],["курс (навчальний)","course"],["практика (стажування)","internship"],["стипендія","scholarship"],["вивчати напам'ять","memorize, learn by heart"],["повторювати (матеріал)","revise, review"],["здоров'я","health"],["здоровий","healthy"],["хворий","ill, sick"],["біль","pain"],["головний біль","headache"],["болить горло","sore throat"],["кашель","cough"],["застуда","cold"],["температура (жар)","fever, temperature"],["ліки","medicine, medication"],["пігулка","pill, tablet"],["рецепт (від лікаря)","prescription"],["аптека","pharmacy, chemist's"],["лікарня","hospital"],["медсестра","nurse"],["травма","injury"],["зламати (кістку)","break a bone"],["одужувати (почуватися краще)","get better"],["втрачати вагу","lose weight"],["набирати вагу","put on weight, gain weight"],["тримати форму","keep fit, stay fit"],["дієта","diet"],["вправа (фізична)","exercise"],["алергія","allergy"],["втомлений","tired"],["сонний","sleepy"],["стрес","stress"],["розслаблятися","relax"],["плече","shoulder"],["коліно","knee"],["спина","back"],["шия","neck"],["шкіра","skin"],["кров","blood"],["серце","heart"],["легені","lungs"],["мозок","brain"],["зуб","tooth"],["лікар-стоматолог","dentist"],["особистість, характер","personality, character"],["товариський","friendly, sociable"],["балакучий","talkative"],["тихий, спокійний","quiet, calm"],["ледачий","lazy"],["працьовитий","hard-working"],["розумний","smart, clever, intelligent"],["дурний","stupid, silly"],["смішний","funny"],["серйозний","serious"],["надійний (про людину)","trustworthy"],["впертий","stubborn"],["чарівний (приємний)","charming"],["ввічливий (поштивий)","courteous"],["нахабний","cheeky, arrogant"],["амбітний","ambitious"],["впевнений у собі","self-confident"],["невпевнений","insecure, unsure"],["дружелюбний, привітний","welcoming"],["незалежний","independent"],["відкритий (до нового)","open-minded"],["норовливий, настроєвий","moody"],["друг","friend"],["знайомий","acquaintance"],["родич","relative"],["батьки","parents"],["брат або сестра","sibling"],["чоловік (у шлюбі)","husband"],["дружина","wife"],["наречений","fiance, groom"],["весілля","wedding"],["одружитися","get married, marry"],["розлучитися","get divorced, divorce"],["зустрічатися (з кимось)","go out with, date"],["закохатися","fall in love"],["розійтися (про пару)","split up"],["дитинство","childhood"],["підліток","teenager"],["дорослий","adult, grown-up"],["літня людина","elderly person, senior"],["щасливий","happy"],["сумний","sad"],["злий, сердитий","angry"],["наляканий","scared, frightened, afraid"],["схвильований (у доброму сенсі)","excited"],["нудьгуючий","bored"],["нудний","boring"],["цікавий","interesting"],["задоволений","pleased, satisfied"],["вдячний","grateful, thankful"],["засмучений","upset"],["роздратований (злий)","irritated"],["приголомшений (шокований)","shocked"],["розслаблений","relaxed"],["самовпевнений","overconfident"],["пишатися","be proud of"],["соромно","ashamed"],["боятися","be afraid of"],["сумувати","feel sad"],["хвилюватися","worry"],["заспокоїтися","calm down"],["підбадьорити","cheer up"],["плакати","cry"],["сміятися","laugh"],["усміхатися","smile"],["кричати","shout, scream"],["обіймати","hug"],["цілувати","kiss"],["погода","weather"],["прогноз погоди","weather forecast, forecast"],["сонячно","sunny"],["хмарно","cloudy"],["дощить","it's raining, rainy"],["вітряно","windy"],["туманно","foggy"],["гроза","thunderstorm, storm"],["блискавка","lightning"],["грім","thunder"],["злива","heavy rain, downpour"],["сніг","snow"],["лід","ice"],["теплий","warm"],["прохолодний","cool"],["вологий","humid, wet"],["сухий","dry"],["клімат","climate"],["ліс","forest, woods"],["поле","field"],["річка","river"],["озеро","lake"],["море","sea"],["узбережжя","coast"],["пляж","beach"],["гора","mountain"],["пагорб","hill"],["долина","valley"],["острів","island"],["печера","cave"],["пустеля","desert"],["дерево","tree"],["квітка","flower"],["трава","grass"],["тварина","animal"],["птах","bird"],["комаха","insect"],["домашня тварина","pet"],["дика природа","wildlife"],["природа","nature"],["забруднювати","pollute"],["переробляти (відходи)","recycle"],["енергія","energy"],["сонячна енергія","solar energy, solar power"],["зміна клімату","climate change"],["глобальне потепління","global warming"],["передмістя","suburbs"],["центр міста","city centre, downtown"],["будівля","building"],["хмарочос","skyscraper"],["міст","bridge"],["площа (у місті)","square"],["тротуар","pavement, sidewalk"],["бібліотека","library"],["музей","museum"],["галерея","gallery"],["пошта","post office"],["поліцейська дільниця","police station"],["пожежна служба","fire brigade, fire department"],["ратуша","town hall, city hall"],["житловий будинок (багатоквартирний)","block of flats, apartment building"],["жвавий, людний","busy, crowded"],["тихий (про місце)","peaceful"],["шумний","noisy"],["брудний","dirty"],["чистий","clean"],["комп'ютер","computer"],["ноутбук","laptop"],["смартфон","smartphone"],["завантажувати (з інтернету)","download"],["вивантажувати (в інтернет)","upload"],["пароль","password"],["обліковий запис","account"],["вхід (в систему)","log in, sign in"],["вийти (з системи)","log out, sign out"],["налаштування","settings"],["оновлення","update"],["програмне забезпечення","software"],["пристрій","device"],["екран","screen"],["клавіатура","keyboard"],["вебсайт","website"],["соціальні мережі","social media"],["дописувати (в мережі)","post"],["підписник","follower"],["шукати (в інтернеті)","search, google"],["друкувати","print, type"],["видаляти (файл)","delete"],["вкладення","attachment"],["повідомлення","message"],["дзвонити (телефоном)","call, phone, ring"],["передзвонити","call back"],["покласти слухавку","hang up"],["залишити повідомлення","leave a message"],["лист (електронний)","email"],["відповідати","answer, reply"],["розмова","conversation"],["обговорювати","discuss"],["пліткувати","gossip"],["жартувати","joke"],["перебивати","interrupt"],["погоджуватися","agree"],["не погоджуватися","disagree"],["вітати (з нагоди)","congratulate"],["дякувати","thank"],["прощатися","say goodbye"],["вітатися","greet, say hello"],["щодня","every day, daily"],["щотижня","weekly, every week"],["іноді","sometimes"],["зрідка","rarely, seldom"],["часто","often, frequently"],["завжди","always"],["ніколи","never"],["зазвичай","usually"],["нещодавно","recently, lately"],["незабаром","soon"],["раніше (колись)","earlier, before"],["пізніше","later"],["згодом, врешті","in the end, finally"],["тим часом","meanwhile"],["вже","already"],["ледь не, майже","almost"],["саме тоді","just then"],["відразу","immediately, at once"],["раптом","suddenly"],["поступово","gradually"],["водночас","at the same time"],["протягом (часу)","during"],["позаторік","the year before last"],["післязавтра","the day after tomorrow"],["позавчора","the day before yesterday"],["вихідні","weekend"],["свято","celebration"],["день народження","birthday"],["річниця","anniversary"],["вечірка","party"],["запрошення","invitation"],["подарунок","present, gift"],["змагання (спортивне)","match, game"],["тренування","training, practice"],["перемагати","win"],["програвати","lose"],["гравець","player"],["команда","team"],["вболівальник","fan"],["хобі","hobby"],["вільний час","free time, spare time"],["захоплення (улюблена справа)","passion"],["малювати","draw, paint"],["фотографувати","take photos, take pictures"],["грати на гітарі","play the guitar"],["читати","read"],["дивитися (телевізор)","watch"],["слухати","listen"],["танцювати","dance"],["співати","sing"],["плавати","swim"],["бігати","run, jog"],["кататися на велосипеді","ride a bike, cycle"],["ходити в походи","go hiking, hike"],["кемпінг","camping"],["риболовля","fishing"],["колекціонувати","collect"],["новини","news"],["журнал","magazine"],["газета","newspaper"],["реклама","advertisement, advert, ad"],["фільм","film, movie"],["серіал","series, TV series, show"],["актор","actor"],["режисер","director"],["сюжет","plot"],["кінцівка","ending"],["глядач (один)","viewer"],["концерт","concert"],["квитки розпродано","sold out"],["спробувати","try"],["вирішити (прийняти рішення)","decide"],["планувати","plan"],["мріяти","dream"],["сподіватися","hope"],["вірити","believe"],["пам'ятати","remember"],["забувати","forget"],["знати","know"],["розуміти","understand"],["навчити","teach"],["давати","give"],["брати","take"],["приносити","bring"],["відправляти","send"],["чекати","wait"],["знаходити","find"],["кидати","throw"],["ловити","catch"],["тягнути","pull"],["штовхати","push"],["піднімати","lift"],["тримати","hold, keep"],["падати","fall"],["стрибати","jump"],["будувати","build"],["ламати","break"],["повертатися","return, come back"],["залишати (покидати)","leave"],["прибувати","arrive"],["починати","start, begin"],["закінчувати","finish, end"],["продовжувати","continue"],["допомагати","help"],["просити","ask"],["відкривати","open"],["закривати","close, shut"],["легкий (нескладний)","easy"],["складний, важкий","difficult, hard"],["важкий (за вагою)","heavy"],["легкий (за вагою)","light"],["швидкий","fast, quick"],["повільний","slow"],["гучний","loud"],["м'який","soft"],["гладкий","smooth"],["безпечний","safe"],["корисний","useful, helpful"],["шкідливий","harmful"],["можливий","possible"],["неможливий","impossible"],["важливий","important"],["головний","main"],["справжній","real"],["несправжній, фальшивий","fake"],["правильний","right, correct"],["неправильний","wrong"],["схожий","similar"],["різний","different"],["однаковий","the same"],["особливий","special"],["звичайний","ordinary, usual"],["дивний (незвичний)","strange, unusual"],["відомий","famous, well-known"],["популярний","popular"],["готовий","ready"],["живий","alive"],["мертвий","dead"],["порожній","empty"],["глибокий","deep"],["мілкий","shallow"],["високий (про людину)","tall"],["низький","short, low"],["товстий","thick, fat"],["тонкий","thin"],["гарний","beautiful, pretty"],["потворний","ugly"],["молодий","young"],["старий","old"],["бідний","poor"],["приватний","private"],["публічний, громадський","public"],["міжнародний","international"],["національний","national"],["традиційний","traditional"],["природний","natural"],["штучний","artificial"],["жахливий","terrible, awful, horrible"],["чудовий","excellent, brilliant"],["приємний","nice, pleasant"],["неприємний","unpleasant"],["зручний","convenient"],["незручний (невчасний)","inconvenient"],["до сліз смішний","hilarious"],["цілком, повністю","completely, totally"],["особливо","especially"],["напевно","probably"],["можливо","maybe, perhaps"],["звичайно","of course, certainly"],["на щастя","fortunately, luckily"],["на жаль","unfortunately"],["насправді (в дійсності)","in reality, really"],["разом","together"],["окремо","separately"],["знову","again"],["теж","also, too"],["ні... ні","neither nor"],["або... або","either or"],["хоча","although"],["тому що","because, since"],["тому (отже)","so, therefore"],["якщо","if"],["поки, доки","while, until"],["крім того (до того ж)","in addition"],["наприклад","for example"],["по-перше","firstly, first of all"],["нарешті","at last"],["між","between"],["серед","among"],["навколо","around"],["всередині","inside"],["зовні","outside"],["навпроти","opposite"],["поруч із","next to, beside"],["позаду","behind"],["над","above, over"],["під","under, below"],["через (крізь)","through"],["уздовж","along"],["до (по напрямку до)","towards"],["вставати (з ліжка)","get up"],["прокидатися","wake up"],["лягати спати","go to bed"],["вдягати","put on"],["переодягатися","get changed"],["вмикати в розетку","plug in"],["прибирати (ставити на місце)","put away"],["вибиратися (з місця)","get out"],["заходити (всередину)","come in, go in"],["заходити в гості","come over, visit"],["виходити (гуляти)","go out"],["повертатися додому","get back home"],["шукати (в словнику)","look it up"],["доглядати (за дитиною)","babysit"],["вирощувати","grow"],["чекати з нетерпінням","can't wait"],["поспішати","hurry, hurry up, rush"],["запізнюватися","be late"],["встигати","make it on time"],["мати рацію","be right"],["помилятися","be wrong, make a mistake"],["не мати значення","doesn't matter, it doesn't matter"],["не заперечую","I don't mind"],["як справи","how are you, how's it going"],["не за що","you're welcome"],["без проблем","no problem"],["звісно","sure"],["так собі","so-so"],["бути в захваті","be delighted, be thrilled"],["бути в поганому настрої","be in a bad mood"],["у доброму настрої","in a good mood"],["втратити роботу","lose your job, lose a job"],["заробляти на життя","make a living, earn a living"],["заощаджувати гроші","save money"],["витрачати час","waste time, spend time"],["приділяти час","make time"],["гарно провести час","have a good time"],["прийняти душ","take a shower, have a shower"],["самостійно, сам","on my own, by myself, alone"],["не поспішати","take your time"],["орендна плата","rent"],["зламатися (про техніку)","break down"],["замовлення","order"],["пацієнт (у лікарні)","patient"],["виховувати (дітей)","bring up, raise"],["спекотний","hot"],["парк","park"],["холодний","cold"],["побачення","date"],["показувати","show"],["шукати","look for"],["класти","put"],["змінювати","change"],["зупиняти(ся)","stop"],["мати значення","matter"],["майже (ледь не)","nearly"]],"b2":[["набувати (навичок)","acquire"],["пристосовуватися","adapt"],["коригувати, налаштовувати","adjust"],["розподіляти (ресурси)","allocate"],["аналізувати","analyze, analyse"],["цінувати, бути вдячним","appreciate"],["схвалювати","approve"],["припускати","assume, suppose"],["приваблювати","attract"],["обвалюватися, розвалюватися","collapse"],["скоювати, зобов'язуватися","commit"],["дійти висновку, завершувати","conclude"],["радитися (з фахівцем)","consult"],["робити внесок","contribute"],["визначати (зміст)","define"],["заперечувати","deny"],["відрізняти одне від одного","distinguish"],["виникати, з'являтися","emerge"],["давати змогу","enable"],["гарантувати, забезпечувати","ensure"],["засновувати, встановлювати","establish"],["оцінювати (приблизно)","estimate"],["оцінювати (якість)","evaluate"],["перебільшувати","exaggerate"],["розширювати(ся)","expand"],["підкреслювати, виділяти","highlight, emphasize"],["ігнорувати","ignore"],["тлумачити","interpret"],["розслідувати","investigate"],["підтримувати (у робочому стані)","maintain"],["стежити, контролювати","monitor"],["вести переговори","negotiate"],["траплятися","occur"],["долати","overcome"],["просувати, підвищувати (на посаді)","promote"],["прагнути (мети)","pursue"],["одужувати","recover"],["розмірковувати, відображати","reflect"],["зміцнювати, посилювати","reinforce, strengthen"],["відхиляти","reject"],["випускати, звільняти","release"],["видаляти, прибирати","remove"],["опиратися","resist"],["відновлювати","restore"],["розкривати (таємницю)","reveal, disclose"],["шукати, прагнути","seek"],["боротися, насилу щось робити","struggle"],["підтримувати (тривалий час)","sustain"],["перетворювати","transform"],["різнитися, змінюватися","vary"],["знімати (гроші), відкликати","withdraw"],["рясний, численний","abundant, plentiful"],["належний","adequate"],["доступний за ціною","affordable"],["легкодоступний","accessible"],["привабливий","appealing, attractive"],["гіркий, озлоблений","bitter"],["конфіденційний","confidential"],["послідовний, стабільний","consistent"],["вирішальний","crucial, decisive"],["рішучий","determined, resolute"],["навмисний","deliberate, intentional"],["щільний","dense"],["відчайдушний","desperate"],["сповнений ентузіазму","enthusiastic"],["основоположний","fundamental"],["поступовий","gradual"],["ворожий","hostile"],["відданий, вірний","loyal"],["помірний","moderate"],["видатний","outstanding"],["приголомшливий, непосильний","overwhelming"],["точний (до дрібниць)","precise, exact"],["визначний, вражаючий","remarkable"],["суворий, серйозний (про наслідки)","severe"],["щирий","sincere"],["витончений, складний","sophisticated"],["спонтанний","spontaneous"],["стабільний, рівномірний","steady"],["напружений, стресовий","stressful"],["поверхневий","superficial"],["достатній","sufficient, enough"],["дрібний, неважливий","trivial"],["терміновий","urgent"],["яскравий (про спогад)","vivid"],["амбіція","ambition"],["тривожність","anxiety"],["обізнаність","awareness"],["перешкода, бар'єр","barrier, obstacle"],["тягар","burden"],["місткість, здатність","capacity"],["компроміс","compromise"],["впевненість","confidence"],["внесок","contribution"],["критика","criticism"],["дилема","dilemma"],["наголос","emphasis"],["фахові знання","expertise"],["настанови","guidance"],["вагання","hesitation"],["ідентичність","identity"],["наслідок, підтекст","implication"],["ініціатива","initiative"],["взаємодія","interaction"],["залученість","involvement"],["явище","phenomenon"],["точка зору","perspective, point of view, viewpoint"],["уподобання","preference"],["упередження","prejudice, bias"],["репутація","reputation"],["ресурс","resource"],["відповідальність","responsibility"],["виручка","revenue"],["масштаб, рамки","scope"],["стратегія","strategy"],["сильна сторона","strength"],["нахил (до чогось)","tendency"],["загроза","threat"],["тенденція","trend"],["ризикована справа","venture"],["добробут","welfare, well-being, wellbeing"],["в результаті","as a result"],["загалом (в цілому)","on the whole"],["попри, незважаючи на","in spite of"],["докласти зусиль","make an effort"],["впливати на","have an impact on"],["спричиняти, породжувати","give rise to"],["зводити кінці з кінцями","make ends meet"],["брати на себе відповідальність","take responsibility"],["поки що","for the time being"],["само собою зрозуміло","it goes without saying"],["галузь (промисловість)","industry"],["сектор","sector"],["ринок","market"],["пропозиція (на ринку)","supply"],["конкурент","competitor"],["прибуток","profit"],["збиток","loss"],["інвестувати","invest"],["інвестиція","investment"],["акціонер","shareholder"],["акція (цінний папір)","stock"],["фінансувати","fund, finance"],["кошти, фонд","funds"],["витрати","expenses, costs"],["зростання","growth"],["спад (в економіці)","recession, downturn"],["інфляція","inflation"],["безробіття","unemployment"],["ставка (відсоткова)","interest rate, rate"],["виплачувати (борг)","pay off debt"],["збанкрутувати","go bankrupt"],["злиття (компаній)","merger"],["угода (контракт)","contract"],["підписати контракт","sign a contract"],["умови (договору)","terms, terms and conditions"],["продовжити (термін)","extend"],["продовження","extension"],["постачальник","supplier"],["виробляти","produce, manufacture"],["виробник","manufacturer, producer"],["продукт (виріб)","product"],["послуга","service"],["споживач","consumer"],["збут, продажі","sales"],["маркетинг","marketing"],["реклама (просування)","advertising"],["кампанія","campaign"],["цільова аудиторія","target audience"],["частка ринку","market share"],["звіт","report"],["презентація","presentation"],["пропозиція (ділова)","proposal"],["термін (кінцевий)","due date"],["пріоритетний","high-priority"],["делегувати","delegate"],["контролювати (нагляд)","supervise"],["керівник (прямий)","supervisor"],["підлеглий","subordinate"],["персонал","staff, personnel"],["відділ кадрів","human resources, HR"],["набір персоналу","recruitment"],["кандидат","candidate, applicant"],["посада","position"],["вакансія","vacancy, opening"],["зарплата (річна)","annual salary"],["пільги","benefits"],["відпустка (оплачувана)","paid leave"],["лікарняний","sick leave"],["декретна відпустка","maternity leave"],["віддалена робота","remote work, working from home"],["графік","schedule"],["продуктивність","productivity"],["ефективність","efficiency"],["досягнення","achievement"],["мотивація","motivation"],["співпраця","cooperation, collaboration"],["співпрацювати","cooperate, collaborate"],["нетворкінг","networking"],["підприємець","entrepreneur"],["стартап","startup, start-up"],["власник бізнесу","business owner"],["самозайнятий","self-employed"],["фрилансер","freelancer"],["галузевий фахівець","specialist, expert"],["консультант","consultant"],["посадова інструкція","job description"],["випробувальний термін","probation, probationary period"],["звільнення (скорочення)","redundancy, layoff"],["пенсійний вік","retirement age"],["профспілка","trade union, union"],["страйк","strike"],["переговори","negotiations, talks"],["уряд","government"],["влада","authorities, power"],["закон","law"],["законодавство","legislation"],["правило","rule"],["регулювати","regulate"],["політика (курс)","policy"],["вибори","election"],["голосувати","vote"],["громадянин","citizen"],["громадянство","citizenship"],["права людини","human rights"],["свобода","freedom, liberty"],["рівність","equality"],["нерівність","inequality"],["дискримінація","discrimination"],["бідність","poverty"],["добробут (соціальний захист)","social welfare"],["благодійність","charity"],["волонтер","volunteer"],["пожертвувати","donate"],["громада","community"],["меншина","minority"],["більшість","majority"],["протест","protest"],["реформа","reform"],["корупція","corruption"],["податкова система","tax system"],["бюджет (державний)","state budget"],["державний (публічний сектор)","public sector"],["приватний сектор","private sector"],["злочин","crime"],["злочинець","criminal"],["крадіжка","theft"],["грабіжник","burglar, robber"],["пограбування","robbery"],["шахрайство","fraud, scam"],["жертва","victim"],["свідок","witness"],["підозрюваний","suspect"],["заарештувати","arrest"],["суд","court"],["суддя","judge"],["адвокат","lawyer, attorney"],["вирок","sentence, verdict"],["покарання","punishment"],["штраф","fine"],["в'язниця","prison, jail"],["невинний","innocent"],["доказ","proof"],["безпека","safety, security"],["незаконний","illegal"],["законний","legal, lawful"],["порушувати (закон)","break the law"],["дотримуватися (правил)","follow the rules, obey"],["засоби масової інформації","media, mass media"],["журналіст","journalist, reporter"],["стаття","article"],["заголовок","headline"],["висвітлювати (в новинах)","cover"],["висвітлення (події)","coverage"],["джерело","source"],["фейкові новини","fake news"],["дезінформація","misinformation, disinformation"],["цензура","censorship"],["прямий ефір","live broadcast, live"],["трансляція","broadcast"],["підписка","subscription"],["впливовий","influential"],["громадська думка","public opinion"],["опитування","survey, poll"],["статистика","statistics"],["дані","data"],["наука","science"],["науковець","scientist"],["експеримент","experiment"],["лабораторія","laboratory, lab"],["теорія","theory"],["гіпотеза","hypothesis"],["відкриття","discovery"],["винахід","invention"],["винаходити","invent"],["технологія","technology"],["штучний інтелект","artificial intelligence, AI"],["досліджувати","explore"],["вимірювати","measure"],["обчислювати","calculate"],["точність","accuracy"],["результат (дослідження)","findings"],["доводити (науково)","demonstrate"],["викиди (шкідливі)","emissions"],["вуглекислий газ","carbon dioxide, CO2"],["відновлювана енергія","renewable energy"],["викопне паливо","fossil fuels"],["вітрова енергія","wind power, wind energy"],["посуха","drought"],["повінь","flood"],["землетрус","earthquake"],["виверження","eruption"],["стихійне лихо","natural disaster"],["вимирання","extinction"],["вимираючий (вид)","endangered"],["середовище проживання","habitat"],["вид (біологічний)","species"],["вирубка лісів","deforestation"],["сталий (екологічний)","sustainable"],["сталість","sustainability"],["пластик","plastic"],["пакування","packaging"],["охорона (природи)","conservation"],["заповідник","nature reserve"],["забруднений","polluted"],["екосистема","ecosystem"],["ресурси (природні)","natural resources"],["дефіцит води","water shortage"],["нестача (їжі)","scarcity"],["вуглецевий слід","carbon footprint"],["психічне здоров'я","mental health"],["депресія","depression"],["самооцінка","self-esteem"],["впевненість у собі","self-confidence"],["емоційний","emotional"],["поведінка","behaviour"],["особистий простір","personal space"],["межі (особисті)","boundaries"],["підтримка (емоційна)","emotional support"],["справлятися зі стресом","cope with stress, manage stress"],["терапевт (психолог)","therapist, psychologist"],["звичка (шкідлива)","bad habit"],["залежність","addiction"],["сон (якість сну)","sleep quality"],["харчування","nutrition"],["збалансований","balanced"],["фізична активність","physical activity"],["профілактика","prevention"],["лікування","treatment"],["симптом","symptom"],["діагноз","diagnosis"],["операція (хірургічна)","surgery, operation"],["вакцина","vaccine"],["імунітет","immunity, immune system"],["інфекція","infection"],["хронічний","chronic"],["заразний","contagious, infectious"],["одужання","recovery"],["тривалість життя","life expectancy"],["медичне страхування","health insurance"],["освіта","education"],["навчальний план","curriculum"],["кваліфікація","qualification"],["атестат, сертифікат","certificate"],["вища освіта","higher education"],["випускник","graduate"],["магістр","master's degree"],["бакалавр","bachelor's degree"],["дисертація","thesis, dissertation"],["дистанційне навчання","distance learning, online learning"],["самоосвіта","self-study"],["навчання впродовж життя","lifelong learning"],["критичне мислення","critical thinking"],["вирішення проблем","problem solving"],["творчість","creativity"],["уява","imagination"],["зосередженість","concentration, focus"],["відволікання","distraction"],["стосунки на відстані","long-distance relationship"],["близькі стосунки","close relationship"],["зрадити","betray"],["зрада","betrayal"],["ревнощі","jealousy"],["сварка","quarrel, row"],["підтримувати (когось емоційно)","be there for someone"],["покладатися (довіряти)","count on"],["розчарування","disappointment"],["співчуття","sympathy, compassion"],["емпатія","empathy"],["повага","respect"],["сором","shame"],["провина (почуття)","guilt"],["гнів","anger"],["розпач","despair"],["полегшення","relief"],["цікавість","curiosity"],["задоволення","satisfaction"],["нудьга","boredom"],["самотність","loneliness"],["горе","grief"],["тужити","long for"],["заздрити","envy"],["вражений (захоплений)","impressed"],["розлючений","furious"],["пригнічений","depressed, down"],["схвильований (стривожений)","agitated"],["знервований (на межі)","on edge"],["приголомшений (розгублений)","stunned"],["ображений","offended"],["неспокійний","restless"],["безтурботний","carefree"],["визнати (зізнатися)","confess"],["звинувачувати","blame"],["вимагати пояснень","demand an explanation"],["сповіщати (офіційно)","notify"],["повідомляти","inform"],["оголошувати","announce"],["заявляти","state, declare"],["натякати","hint"],["запевняти","assure"],["погоджуватися (на щось)","consent"],["відмовляти (комусь)","turn someone down"],["критикувати","criticize, criticise"],["хвалити","praise"],["скаржитися (офіційно)","file a complaint"],["заперечувати (проти)","object"],["підтверджувати","confirm"],["уточнювати","specify"],["перебільшення","exaggeration"],["порівняння","comparison"],["відрізнятися","differ"],["нагадувати (бути схожим)","resemble"],["поєднувати","combine"],["пов'язувати","link, connect"],["відокремлювати","separate"],["зосереджуватися","concentrate"],["враховувати","take into consideration"],["уникати (відповідальності)","shirk"],["відкладати (на потім)","postpone"],["прискорювати","speed up, accelerate"],["сповільнювати","slow down"],["розширювати","broaden"],["скорочувати","shorten"],["зберігати (підтримувати)","preserve"],["захищати (від)","shield"],["запобігати","prevent"],["забезпечувати (надавати)","provide"],["постачати","supply goods"],["розподіляти (роздавати)","distribute"],["обмінювати","exchange"],["перевіряти","verify"],["контролювати (обмежувати)","control"],["прогнозувати","predict"],["планувати (заздалегідь)","plan ahead"],["організовувати (захід)","host an event"],["координувати","coordinate"],["керувати (очолювати)","lead"],["демонструвати","display, showcase"],["займатися (чимось)","be involved in, engage in"],["брати на себе (обов'язки)","take on responsibility"],["досягати успіху","succeed, do well"],["зазнавати невдачі","fail"],["намагатися","try hard, strive"],["прагнути","aspire"],["вдосконалювати","refine, perfect"],["розвивати (навички)","build skills, develop skills"],["замінювати (тимчасово)","cover for"],["відповідати (вимогам)","meet requirements"],["відповідати (за щось)","be responsible for"],["покладати відповідальність","hold responsible"],["вирішальний момент","turning point"],["зростати","rise"],["падати (знижуватися)","drop"],["досягати піку","peak"],["залишатися стабільним","remain stable"],["значно","significantly, considerably"],["трохи","slightly"],["різко","sharply, dramatically"],["поступово (помалу)","steadily"],["приблизно","approximately, about"],["точно (саме)","exactly, precisely"],["очевидно","obviously, clearly"],["безумовно","definitely"],["тим не менш","however"],["натомість","instead"],["відтак (отже)","thus"],["з одного боку","on the one hand"],["з іншого боку","on the other hand"],["на відміну від","unlike, in contrast to"],["так само як","just as"],["подібно до","similarly"],["на мою думку","in my opinion, in my view"],["наскільки я розумію","as far as I understand"],["загалом кажучи","generally speaking"],["іншими словами","in other words"],["до речі","incidentally"],["зокрема","specifically"],["вигідний","profitable, beneficial"],["невигідний","unprofitable"],["конкурентоспроможний","competitive"],["інноваційний","innovative"],["застарілий","outdated"],["сучасний (новітній)","up-to-date"],["надійний (про річ)","dependable"],["практичний","practical"],["реалістичний","realistic"],["нереалістичний","unrealistic"],["складний (заплутаний)","complicated, complex"],["простий (нескладний)","simple"],["зрозумілий","clear, understandable"],["незрозумілий","unclear"],["шкідливий (для здоров'я)","unhealthy"],["загальний","general"],["конкретний","concrete"],["абстрактний","abstract"],["об'єктивний","objective"],["суб'єктивний","subjective"],["логічний","logical"],["нелогічний","illogical"],["раціональний","rational"],["передбачуваний","predictable"],["непередбачуваний","unpredictable"],["тимчасовий (короткочасний)","short-term"],["довгостроковий","long-term"],["постійний","permanent"],["безперервний","continuous"],["регулярний","regular"],["випадковий","accidental"],["навмисно","deliberately, intentionally"],["раптовий","sudden"],["значний (помітний)","noticeable"],["незначний","insignificant"],["величезний","enormous, vast"],["обмежений","limited"],["необмежений","unlimited"],["відчутний","perceptible"],["помітний","visible"],["невидимий","invisible"],["чесний (справедливий)","fair"],["несправедливий","unfair"],["етичний","ethical"],["неетичний","unethical"],["моральний","moral"],["обов'язковий","compulsory, mandatory, obligatory"],["необов'язковий","optional"],["суворий (строгий)","harsh"],["лагідний, м'який","gentle"],["настирливий, нахрапистий","pushy"],["пасивний","passive"],["активний","active"],["енергійний","energetic"],["млявий, повільний","sluggish"],["спокійний (урівноважений)","composed, level-headed"],["дратівливий","irritable"],["терпимий, толерантний","tolerant"],["егоцентричний","self-centred, self-centered"],["скромний","humble"],["цілеспрямований","goal-oriented, purposeful"],["творчий","creative"],["критичний","critical"],["аналітичний","analytical"],["організований","organized"],["неорганізований","disorganized"],["пунктуальний","punctual"],["вимогливий","demanding"],["вибагливий","choosy"],["легковажний","frivolous"],["наївний","naive"],["мудрий","wise"],["досвідчений (бувалий)","seasoned"],["кмітливий","quick-witted, bright"],["домовитися (про зустріч)","set up a meeting"],["скасувати (відмовитися)","call it off"],["відкласти (зустріч)","push back"],["перенести на раніше","bring forward"],["здаватися (виглядати)","come across as"],["натрапити на (проблему)","run up against"],["осісти, влаштуватися","settle down"],["вирватися (втекти)","break out"],["зупинитися ненадовго","pull over"],["під'їхати, зупинитися (про авто)","pull up"],["витримати (до кінця)","hold out"],["чекати (на лінії)","hang on"],["триматися за (не відпускати)","hold onto"],["продовжувати (робити)","keep on"],["відкрутитися (від обов'язку)","get out of"],["видужати (після хвороби)","pull through"],["підвести (розчарувати)","let down"],["впустити (всередину)","let in"],["звільнити (відпустити)","let go"],["розібратися (в системі)","find your way around"],["відставати","lag behind"],["наздогнати","catch up with"],["урізати (витрати)","cut costs"],["знищити","destroy"],["зруйнувати (плани)","ruin, spoil"],["підбити підсумки","sum it up"],["дотримуватися (плану)","stick to the plan"],["відповідати (відгукнутися)","get back to someone"],["передати (повідомлення)","pass on"],["роздати","hand out"],["переглянути (рішення)","reconsider"],["вигадати (історію)","make up a story"],["спиратися на (факти)","draw on"],["ухвалювати (закон)","pass a law"],["втілити в життя","put into practice"],["отримати користь","benefit from"],["зробити висновки","draw conclusions"],["досягти мети","reach a goal, achieve a goal"],["ставити цілі","set goals"],["приймати виклик","take on a challenge, accept a challenge"],["брати на себе ризик","take a risk"],["мати перевагу","have an advantage"],["втратити можливість","miss an opportunity, miss a chance"],["скористатися нагодою","seize the opportunity, take the chance"],["вирішити проблему","solve a problem"],["справити хороше враження","make a good impression"],["привернути увагу","attract attention, catch someone's eye"],["втратити інтерес","lose interest"],["висловити думку","express an opinion"],["поставити під загрозу","put at risk"],["відігравати роль","play a role, play a part"],["завдати шкоди","do harm, cause damage"],["нести відповідальність","bear responsibility"],["тримати слово","keep your word, keep a promise"],["порушити обіцянку","break a promise"],["поставити питання","raise a question"],["сказати правду","tell the truth"],["збрехати","tell a lie, lie"],["тримати в секреті","keep a secret, keep it secret"],["поділитися досвідом","share experience"],["втратити самовладання","lose your temper"],["зберігати спокій","keep calm, stay calm"],["заводити друзів","make friends"],["підтримувати стосунки","maintain a relationship"],["втратити зв'язок","lose touch"],["налагодити стосунки","build a relationship"],["аспект","aspect"],["фактор, чинник","factor"],["елемент","element"],["деталь","detail"],["особливість","feature"],["характеристика","characteristic"],["принцип","principle"],["концепція","concept"],["намір","intention, intent"],["очікування","expectation"],["обмеження","limitation, restriction"],["межа","limit"],["можливість (ймовірність)","possibility"],["ймовірність","probability, likelihood"],["ризик","risk"],["небезпека","danger"],["причина","cause"],["наслідок","effect, result"],["відношення (співвідношення)","ratio"],["пропорція","proportion"],["рівень","level"],["кількість","amount, number, quantity"],["відсоток","percentage, per cent"],["середній (показник)","average"],["частина","part"],["ціле","the whole"],["структура","structure"],["система","system"],["процес","process"],["метод","method"],["техніка (прийом)","technique"],["інструмент","tool"],["засіб","means"],["матеріал","material"],["основа","basis, foundation"],["суть","essence, gist"],["зміст","content"],["форма","form, shape"],["спосіб життя","lifestyle, way of life"],["цінності","values"],["культура","culture"],["звичай","custom"],["традиція","tradition"],["спадщина","heritage"],["покоління","generation"],["стереотип","stereotype"],["різноманіття (культурне)","diversity"],["глобалізація","globalization"],["імміграція","immigration"],["еміграція","emigration"],["урбанізація","urbanization"],["інфраструктура","infrastructure"],["житло","housing, accommodation"],["доступне житло","affordable housing"],["іпотека","mortgage"],["ремонт (оновлення)","renovation"],["меблі","furniture"],["обладнання","equipment"],["прилад (побутовий)","appliance"],["пристосування","gadget"],["інновація","innovation"],["цифровий","digital"],["онлайн","online"],["кібербезпека","cybersecurity"],["конфіденційність (приватність)","privacy"],["особисті дані","personal data"],["злам (хакерський)","hack, hacking"],["вірус (комп'ютерний)","computer virus, virus"],["резервна копія","backup"],["хмара (сховище)","cloud storage, the cloud"],["алгоритм","algorithm"],["програміст","programmer, developer"],["інтерфейс","interface"],["користувач","user"],["зручний (для користувача)","user-friendly"],["віртуальний","virtual"],["автоматизувати","automate"],["бути на сьомому небі","be over the moon, on cloud nine"],["дуже дорого коштувати","cost a fortune"],["легко як два пальці","a piece of cake, piece of cake"],["погано почуватися","feel under the weather, under the weather"],["вбити двох зайців","kill two birds with one stone"],["перегнути палку","go too far, overdo it"],["тримати кулаки","keep your fingers crossed, fingers crossed"],["вийти з себе","lose it, fly off the handle"],["розбити кригу (у спілкуванні)","break the ice"],["витати в хмарах","have your head in the clouds"],["стояти на своєму","stand your ground"],["бути в одному човні","be in the same boat"],["спіймати облизня","come away empty-handed"],["діяти комусь на нерви","get on someone's nerves, get on my nerves"],["вилетіти з голови","slip my mind"],["на кінчику язика","on the tip of my tongue"],["до останньої хвилини","at the last minute"],["на крайній випадок","as a last resort"],["під тиском","under pressure"],["поза контролем","out of control"],["під контролем","under control"],["на власні очі","with my own eyes"],["від щирого серця","from the bottom of my heart"],["по секрету","between you and me"],["втратити голову (закохатися)","fall head over heels"],["зробити виняток","make an exception"],["не варто","it's not worth it"],["нічого страшного","never mind, no big deal"],["справа смаку","a matter of taste"],["справа часу","a matter of time"],["все одно (байдуже)","I don't care, whatever"],["як на мене (моя думка)","if you ask me"],["по правді кажучи","to tell the truth"],["чого б це не коштувало","at any cost, at all costs"],["у крайньому разі","at worst"],["в кращому разі","at best"],["як мінімум","at the very least"],["у будь-якому разі (так чи інакше)","in any case"],["з першого погляду (одразу)","at first sight"],["якщо чесно (щиро кажучи)","frankly, honestly"],["досягати (домовленості)","reach an agreement"],["звертатися (до когось)","turn to"],["звертатися (з проханням)","request"],["вибачення","apology"],["пробачення","forgiveness"],["дозволяти","allow, let, permit"],["забороняти","ban, forbid, prohibit"],["відмовляти (відраджувати)","talk out of"],["переконання (дія)","persuasion"],["наважуватися","dare"],["сумніватися","doubt"],["підозрювати","suspect"],["розчаровуватися","be disappointed"],["ставитися (до когось)","treat"],["вражати","impress"],["дивувати","surprise"],["шокувати","shock"],["дратувати","annoy, irritate"],["засмучувати","upset"],["заспокоювати","comfort, soothe"],["розважати","entertain"],["надихати","inspire"],["натхнення","inspiration"],["відчувати","feel, sense"],["усвідомлення","realization"],["розуміння","understanding"],["окреслювати (в загальних рисах)","outline"],["перекладати","translate"],["тлумачення","interpretation"],["значення (сенс)","meaning"],["визначення","definition"],["приклад","example"],["пояснювальний","explanatory"],["детальний","detailed"],["короткий (стислий)","brief"],["довгий (тривалий)","lengthy"],["неповний","incomplete"],["остаточний","final"],["попередній","preliminary, previous"],["наступний","next, following"],["останній","last, latest"],["поточний","current"],["майбутній","future"],["минулий","past"],["сучасний (теперішній)","present-day, contemporary"],["історичний","historical, historic"],["давній","ancient"],["середньовічний","medieval"],["первісний (оригінальний)","original"],["копія","copy"],["версія","version"],["альтернатива, інший варіант","alternative"],["рішення (вихід)","way out"],["компроміс (взаємні поступки)","middle ground"],["угода (домовленість)","arrangement"],["конфлікт (суперечка)","clash"],["тиск (з боку однолітків)","peer pressure"],["їхати на роботу (щодня)","commute"],["час пік","rush hour"],["громадський транспорт","public transport, public transportation"],["проїзний квиток","travel pass, season ticket"],["тариф (за проїзд)","fare"],["маршрут","route"],["об'їзд","detour, diversion"],["паливо","fuel"],["заправка","petrol station, gas station"],["електромобіль","electric car, electric vehicle"],["пішохід","pedestrian"],["велодоріжка","cycle lane, bike lane"],["безпека на дорозі","road safety"],["аварія","accident, crash"],["страховка","insurance"],["туристичний (для туристів)","touristy"],["пригода","adventure"],["дослідник (мандрівник)","explorer"],["мандрувати з наплічником","go backpacking"],["хостел","hostel"],["курорт","resort"],["круїз","cruise"],["віза","visa"],["посольство","embassy"],["обмін валют","currency exchange"],["курс обміну","exchange rate"],["валюта","currency"],["гостинність","hospitality"],["культурний шок","culture shock"],["смакувати (їжу)","savour, savor, taste"],["кухня (національна)","cuisine"],["страва","dish"],["основна страва","main course"],["закуска","starter, appetizer"],["десерт","dessert"],["делікатес","delicacy"],["поживний","nutritious"],["оброблений (про їжу)","processed"],["органічний","organic"],["свіжий","fresh"],["зіпсований (про їжу)","off, gone bad"],["смак","flavour, flavor"],["аромат","aroma, smell"],["солоний","salty"],["соковитий","juicy"],["хрусткий","crispy, crunchy"],["ніжний (про м'ясо)","tender"],["пересмажений","overcooked"],["харчова цінність","nutritional value"],["калорійний","high-calorie"],["дорослішати","grow up"],["зрілість","maturity"],["незалежність","independence"],["самостійність","self-reliance"],["амбіції (прагнення)","aspirations"],["мета життя","life goal"],["покликання","calling, vocation"],["талант","talent"],["здібність","ability"],["сила волі","willpower"],["дисципліна","discipline"],["самоконтроль","self-control"],["наполегливість","persistence, perseverance"],["сміливість","courage, bravery"],["страх невдачі","fear of failure"],["зона комфорту","comfort zone"],["особистісний розвиток","personal growth, self-development"],["баланс між роботою і життям","work-life balance"],["тайм-менеджмент","time management"],["відкладання справ","procrastination"],["перевантаження","overload"],["відпочинок","rest"],["відновити сили, перезарядитися","recharge"],["медитація","meditation"],["уважність (усвідомленість)","mindfulness"],["позитивне мислення","positive thinking"],["песимістичний","pessimistic"],["оптимізм","optimism"],["песимізм","pessimism"],["реалізм","realism"],["вражаючий","impressive"],["жахливий (шокуючий)","shocking"],["захопливий (цікавий)","exciting"],["надзвичайний","extraordinary"],["незабутній","unforgettable"],["розчаровуючий","disappointing"],["заплутаний","confusing"],["сумнівний","questionable"],["спірний","debatable"],["безглуздий","absurd, ridiculous"],["обґрунтований","well-founded, justified"],["несправедливість","injustice"],["справедливість","justice, fairness"],["чесність","honesty"],["щирість","sincerity"],["відвертість","openness"],["надійність","reliability"],["вірність","loyalty"],["щедрість","generosity"],["жадібність","greed"],["гордість","pride"],["скромність","modesty"],["попит","demand"],["кошторис","estimate"],["відходи (сміття)","waste"],["закінчити (університет)","graduate"],["переживати (досвід)","go through"],["наголошувати","stress"],["позначати","mark"],["представляти (продукт)","present"],["виправити","correct"],["мета (призначення)","objective"],["зв'язок","connection, link"],["ризикувати","risk"],["надія","hope"]]};
 const PACK_VERSION = 2;
-const PACK_INFO = { b1: 'Рівень 1 · середній', b2: 'Рівень 2 · вище середнього', mine: 'Рівень 3 · просунутий' };
-const PACK_SHORT = { b1: 'Р1', b2: 'Р2', mine: 'Р3' };
+/* ---------- Native languages (the language you learn FROM) ---------- */
+const NATIVES = {
+  uk: { name: 'Українська', en: 'Ukrainian',  tts: 'uk-UA', ready: true,  or: 'або', hello: 'Привіт! Я допоможу вам вивчати англійські слова.', test: 'Привіт! Так звучить цей голос.' },
+  es: { name: 'Español',    en: 'Spanish',    tts: 'es-ES', ready: true, or: 'o',   hello: '¡Hola! Te ayudaré a aprender palabras en inglés.', test: '¡Hola! Así suena esta voz.' },
+  pt: { name: 'Português',  en: 'Portuguese', tts: 'pt-BR', ready: true, or: 'ou',  hello: 'Olá! Vou te ajudar a aprender palavras em inglês.', test: 'Olá! É assim que esta voz soa.' },
+  tr: { name: 'Türkçe',     en: 'Turkish',    tts: 'tr-TR', ready: true, or: 'veya', hello: 'Merhaba! İngilizce kelimeler öğrenmene yardım edeceğim.', test: 'Merhaba! Bu ses böyle duyuluyor.' },
+  id: { name: 'Bahasa Indonesia', en: 'Indonesian', tts: 'id-ID', ready: true, or: 'atau', hello: 'Halo! Saya akan membantumu belajar kata bahasa Inggris.', test: 'Halo! Beginilah suara ini.' },
+  hi: { name: 'हिन्दी',        en: 'Hindi',      tts: 'hi-IN', ready: true, or: 'या',  hello: 'नमस्ते! मैं आपको अंग्रेज़ी शब्द सीखने में मदद करूँगा।', test: 'नमस्ते! यह आवाज़ ऐसी सुनाई देती है।' },
+  vi: { name: 'Tiếng Việt', en: 'Vietnamese', tts: 'vi-VN', ready: true, or: 'hoặc', hello: 'Xin chào! Tôi sẽ giúp bạn học từ tiếng Anh.', test: 'Xin chào! Đây là giọng nói này.' }
+};
+const NATIVE = () => NATIVES[NATIVE_CODE] || NATIVES.uk;
+const NL = () => NATIVE().tts;
+const PACK_INFO = { b1: 'Level 1 · Intermediate', b2: 'Level 2 · Upper-intermediate', mine: 'Level 3 · Advanced' };
+const PACK_SHORT = { b1: 'L1', b2: 'L2', mine: 'L3' };
 const PACK_ORDER = ['b1', 'b2', 'mine'];
 
 function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
@@ -402,10 +443,46 @@ function mergePacks(words){
   }
   return words;
 }
+// dictionary files hold translations aligned with BASE / PACKS by position: { mine: [...], b1: [...], b2: [...] }
+async function buildNativeDb(lang){
+  const r = await fetch('dict-' + lang + '.json', { cache: 'no-cache' });
+  if (!r.ok) throw new Error('dictionary not found');
+  const dict = await r.json(), words = [], t = Date.now(); let i = 0;
+  const add = (pack, rows) => rows.forEach(([_, en], k) => {
+    const nat = (dict[pack] || [])[k];
+    if (nat) words.push({ ...makeWord(nat, en), pack, added: t + i++ });
+  });
+  add('mine', BASE); add('b1', PACKS.b1); add('b2', PACKS.b2);
+  return words;
+}
+async function switchNative(lang){
+  if (lang === NATIVE_CODE) return;
+  const key = lang === 'uk' ? 'vidlunnia:v1' : 'rehearsal:' + lang;
+  try {
+    if (lang !== 'uk' && !localStorage.getItem(key)){
+      toast('Loading ' + NATIVES[lang].en + '…');
+      const words = await buildNativeDb(lang);
+      const settings = { ...db.settings, native: lang, packs: { mine: false, b1: true, b2: false } };
+      localStorage.setItem(key, JSON.stringify({ words, settings, dictVersion: 1 }));
+    } else if (db.settings.oaKey){
+      // carry the OpenAI key over
+      const d = JSON.parse(localStorage.getItem(key) || 'null');
+      if (d && d.settings && !d.settings.oaKey){ d.settings.oaKey = db.settings.oaKey; localStorage.setItem(key, JSON.stringify(d)); }
+    }
+    localStorage.setItem(KEY_NATIVE, lang);
+    localStorage.removeItem('rehearsal:pending');
+    location.reload();
+  } catch(e){ toast('Could not load the language: ' + e.message); $('setNative').value = NATIVE_CODE; }
+}
 function load(){
   const defaults = { newPer: 10, hints: true, mode: 'pick', packs: { mine: true, b1: false, b2: false } };
   try{
     const d = JSON.parse(localStorage.getItem(KEY));
+    if (d && Array.isArray(d.words) && NATIVE_CODE !== 'uk'){
+      d.settings = { ...defaults, ...(d.settings || {}), native: NATIVE_CODE };
+      d.settings.packs = { ...defaults.packs, ...(d.settings.packs || {}) };
+      return d;
+    }
     if (d && Array.isArray(d.words)){
       d.settings = { ...defaults, ...(d.settings || {}) };
       d.settings.packs = { ...defaults.packs, ...(d.settings.packs || {}) };
@@ -427,7 +504,7 @@ function load(){
   return { words: mergePacks(words), settings: defaults, baseVersion: BASE_VERSION, packVersion: PACK_VERSION, fixVersion: FIX_VERSION };
 }
 let db = load();
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast('Не вдалося зберегти: пам\'ять браузера недоступна'); } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast('Could not save: browser storage is unavailable'); } }
 save();
 
 function status(w){
@@ -456,7 +533,7 @@ function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function show(view){ ['start','session','summary','words','settings'].forEach(v => $('view-'+v).hidden = v !== view); }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-  if (session) { if (!confirm('Завершити поточну сесію?')) return; endSession(); }
+  if (session) { if (!confirm('End the current session?')) return; endSession(); }
   document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x===t));
   if (t.dataset.tab === 'words') { renderList(); show('words'); }
   else if (t.dataset.tab === 'settings') { renderStart(); show('settings'); }
@@ -470,7 +547,7 @@ function releaseAwake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLo
 document.addEventListener('visibilitychange', () => {
   if (!session) return;
   if (document.visibilityState === 'visible') keepAwake();
-  else pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', false);
+  else pauseSession('Paused. Tap the microphone to continue', false);
 });
 
 /* ---------- Speech ---------- */
@@ -495,7 +572,7 @@ function voiceScore(v, lang){
 }
 function pickVoice(lang){
   const list = voicesFor(lang);
-  const chosen = db.settings && db.settings[lang.startsWith('uk') ? 'voiceUk' : 'voiceEn'];
+  const chosen = db.settings && db.settings[lang.startsWith('en') ? 'voiceEn' : 'voiceUk'];
   return list.find(v => v.name === chosen) || list.sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang))[0];
 }
 function speakDevice(text, lang){
@@ -505,7 +582,7 @@ function speakDevice(text, lang){
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang; const v = pickVoice(lang); if (v) u.voice = v;
     const base = (db.settings && db.settings.rate) || 1;
-    u.rate = lang.startsWith('uk') ? base : base * 0.92;
+    u.rate = lang.startsWith('en') ? base * 0.92 : base;
     u.pitch = 1.05; // a touch brighter sounds friendlier
     let done = false; const fin = () => { if (!done){ done = true; clearTimeout(tm); res(); } };
     u.onend = fin; u.onerror = fin;
@@ -569,8 +646,8 @@ function hush(){ if (hasTTS) speechSynthesis.cancel(); stopAudio(); }
 function oaFail(kind, err){
   if (oaBroken[kind]) return;
   oaBroken[kind] = true;
-  const why = /401/.test(err) ? 'невірний ключ' : /429/.test(err) ? 'закінчились кошти або ліміт' : 'немає зв\'язку';
-  toast('OpenAI недоступний (' + why + '). Тимчасово працює вбудований ' + (kind === 'oaVoice' ? 'голос' : 'розпізнавач'));
+  const why = /401/.test(err) ? 'invalid key' : /429/.test(err) ? 'out of credit or rate-limited' : 'no connection';
+  toast('OpenAI unavailable (' + why + '). Using the built-in ' + (kind === 'oaVoice' ? 'voice' : 'recognizer') + ' for now');
   setTimeout(() => { oaBroken[kind] = false; }, 120000);
 }
 // tiny IndexedDB cache so every phrase is paid for only once
@@ -586,9 +663,8 @@ const cache = (() => {
 })();
 function oaInstructions(lang){
   const r = db.settings.rate || 1;
-  const paceUk = r >= 1.15 ? 'швидкий, енергійний темп' : r <= 0.9 ? 'спокійний темп' : 'живий, трохи швидший за звичайний темп';
   const paceEn = r >= 1.15 ? 'a fast, energetic pace' : r <= 0.9 ? 'a calm pace' : 'a brisk, natural pace';
-  if (lang.startsWith('uk')) return 'Говори українською чітко, з ясною дикцією і правильними наголосами. ' + paceUk + ', без затягування слів і пауз. Тон теплий, бадьорий, як у привітного вчителя.';
+  if (!lang.startsWith('en')) return 'Speak ' + NATIVE().en + ' clearly, with crisp diction and correct stress, at ' + paceEn + '. Warm, upbeat tutor voice. No drawn-out words.';
   return 'Speak ' + (lang === 'en-GB' ? 'British' : 'American') + ' English with crisp, very clear articulation at ' + paceEn + '. Warm, upbeat tutor voice. No drawn-out words.';
 }
 async function oaTTS(text, lang){
@@ -740,17 +816,18 @@ async function pickChatModel(){
   // fast non-reasoning models first: a slow model makes the phone drop the connection
   const pref = ['gpt-4.1-mini','gpt-4o-mini','gpt-4.1-nano','gpt-5-mini','gpt-5.1-mini','gpt-5.2-mini'];
   chatModel = pref.find(p => ids.includes(p)) || ids.filter(i => /^gpt-4/.test(i) && /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.filter(i => /mini/.test(i) && !bad.test(i)).sort().reverse()[0] || ids.find(i => /^gpt/.test(i) && !bad.test(i));
-  if (!chatModel) throw new Error('немає моделі');
+  if (!chatModel) throw new Error('no model');
   return chatModel;
 }
 async function writeHints(words){
   const model = await pickChatModel();
   const items = words.map((w, i) => ({ n: String(i + 1), en: w.en[0], uk: w.uk }));
-  const prompt = 'Ти допомагаєш українцю вчити англійські слова. Для кожного слова напиши дуже коротке пояснення українською (2–6 слів), ' +
-    'щоб було зрозуміло, яке саме англійське слово мається на увазі, і його не можна було сплутати з синонімами. ' +
-    'Використовуй уточнювальні синоніми, відтінок значення або типову ситуацію. Приклад: «чудовий» для magnificent — «величний, вражаючий розмахом»; для terrific — «просто відмінний, про враження». ' +
-    'НЕ пиши англійське слово, його частини чи першу літеру. Не повторюй сам український переклад. Без лапок. ' +
-    'Відповідай лише JSON-об\'єктом, де ключ — номер n, а значення — {"en": англійське слово точно як у запиті, "hint": пояснення}. Приклад: {"1": {"en": "touchy", "hint": "легко ображається"}}.\n' + JSON.stringify(items);
+  const L = NATIVE().en;
+  const prompt = 'You help a ' + L + ' speaker learn English words. Each item has an English word (en) and its ' + L + ' translation (uk). ' +
+    'For each, write a very short explanation IN ' + L.toUpperCase() + ' (2–6 words) that makes it clear which exact English word is meant, so it cannot be confused with synonyms. ' +
+    'Use a nuance, a clarifying synonym or a typical situation. ' +
+    'Do NOT write the English word, any part of it or its first letter. Do not repeat the translation itself. No quotes. ' +
+    'Reply with a JSON object only, where the key is the number n and the value is {"en": the English word exactly as given, "hint": the explanation}. Example: {"1": {"en": "touchy", "hint": "..."}}.\n' + JSON.stringify(items);
   const body = { model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 3000 };
   if (/^gpt-5|^o\d/.test(model)) body.reasoning_effort = 'minimal';
   const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 75000);
@@ -761,10 +838,10 @@ async function writeHints(words){
       headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-  } catch(e){ throw new Error(e.name === 'AbortError' ? 'OpenAI не відповів вчасно' : 'немає зв\'язку з OpenAI (' + e.message + ')'); }
+  } catch(e){ throw new Error(e.name === 'AbortError' ? 'OpenAI timed out' : 'no connection to OpenAI (' + e.message + ')'); }
   finally { clearTimeout(tm); }
-  if (r.status === 401) throw new Error('ключ не підходить або закінчився');
-  if (r.status === 429) throw new Error('закінчився баланс або забагато запитів (429)');
+  if (r.status === 401) throw new Error('the key is invalid or expired');
+  if (r.status === 429) throw new Error('out of credit or too many requests (429)');
   if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
   const j = await r.json();
   const txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').replace(/```json|```/g, '').trim();
@@ -852,23 +929,23 @@ function command(heard){
 
 /* ---------- Session (hands-free loop) ---------- */
 let session = null;
-const PHASE = { new: 'Нові слова', review: 'Повторення', retry: 'Ще раз: помилки' };
-const PRAISE = ['Так!', 'Правильно!', 'Чудово!', 'Саме так!', 'Супер!', 'Є!', 'Точно!', 'Молодець!', 'Бездоганно!'];
-const STREAK = { 3: 'Три поспіль, так тримати!', 5: 'П\'ять правильних підряд!', 10: 'Десять поспіль! Неймовірно!', 20: 'Двадцять підряд! Ви в ударі!' };
-const WRONG = ['Майже! Правильно —', 'Не зовсім. Правильна відповідь —', 'Близько, але тут —', 'Ні, це слово —'];
-const DUNNO = ['Нічого страшного. Це —', 'Запам\'ятаймо разом:', 'Спокійно, зараз підкажу:'];
-const REPEAT_OK = ['Ось так!', 'Добре, запам\'ятали.', 'Чудово звучить.'];
-const REPEAT_LATER = ['Нічого, ще до нього повернемося.', 'Не біда, повторимо пізніше.'];
+const PHASE = { new: 'New words', review: 'Review', retry: 'Mistakes again' };
+const PRAISE = ['Yes!', 'Correct!', 'Great!', 'Exactly!', 'Nice!', 'Spot on!', 'Well done!', 'Perfect!'];
+const STREAK = { 3: 'Three in a row!', 5: 'Five in a row!', 10: 'Ten in a row! Amazing!', 20: 'Twenty in a row! You are on fire!' };
+const WRONG = ['Almost! It is', 'Not quite. The answer is', 'Close, but it is', 'No, the word is'];
+const DUNNO = ['No problem. It is', 'Let us remember it:', 'Here it is:'];
+const REPEAT_OK = ['That is it!', 'Good.', 'Sounds great.'];
+const REPEAT_LATER = ['We will come back to it.', 'No worries, we will review it later.'];
 function greeting(){
   const h = new Date().getHours();
-  return h < 5 ? 'Доброї ночі!' : h < 12 ? 'Доброго ранку!' : h < 18 ? 'Добрий день!' : 'Добрий вечір!';
+  return h < 5 ? 'Good night!' : h < 12 ? 'Good morning!' : h < 18 ? 'Good afternoon!' : 'Good evening!';
 }
 
 async function startSession(){
   const fresh = newWords().slice(0, db.settings.newPer);
   const due = dueWords();
   const queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
-  if (!queue.length){ toast('Немає слів для повторення. Додайте нові слова.'); return; }
+  if (!queue.length){ toast('No words to practise. Add some new words.'); return; }
   session = { queue, i: 0, graded: {}, mistakes: [], right: 0, step: 0, locked: false, paused: false };
   show('session'); keepAwake();
   queue.slice(0, 4).forEach(q => warmWord(db.words.find(x => x.id === q.id))); warmPhrases();
@@ -876,23 +953,23 @@ async function startSession(){
   session.streak = 0;
   const step0 = session.step;
   if (!pickMode() && db.settings.oaKey && db.settings.autoHints !== false && queue.some(q => { const w = db.words.find(x => x.id === q.id); return w && !w.hint; })){
-    setStatus('Готую пояснення до слів…');
+    setStatus('Preparing explanations…');
     await Promise.race([ensureHints(queue.slice(0, 30).map(q => q.id)), wait(25000)]);
     if (!session || session.step !== step0) return;
     ensureHints(queue.slice(30).map(q => q.id));   // the rest in the background
   }
   if (pickMode()){ setStatus(''); return presentItem(); }
-  const intro = greeting() + ' ' + (fresh.length ? 'Я називаю слово, а ви перекладаєте англійською. Поїхали!' : 'Сьогодні повторюємо. Поїхали!');
+  const intro = greeting() + ' ' + (fresh.length ? 'I say a word, you say it in English. Let us go!' : 'Review time. Let us go!');
   setStatus(intro);
   const step = session.step;
-  speak(intro, 'uk-UA').then(() => { if (session && session.step === step && !session.paused) presentItem(); });
+  speak(intro, EN()).then(() => { if (session && session.step === step && !session.paused) presentItem(); });
 }
 function current(){ const it = session.queue[session.i]; return { it, w: db.words.find(x => x.id === it.id) }; }
 function alive(step){ return session && step === session.step && !session.paused; }
 function wordPrompt(w){ return w.uk + (db.settings.hints && w.hint ? '. ' + w.hint : ''); }
 // turn list-like notes into speech-friendly text: "позичати (у когось)" -> "позичати, у когось"
 function speakable(t){
-  return t.replace(/\s*\(\s*/g, ', ').replace(/\s*\)\s*/g, ' ').replace(/\s*\/\s*/g, ' або ')
+  return t.replace(/\s*\(\s*/g, ', ').replace(/\s*\)\s*/g, ' ').replace(/\s*\/\s*/g, ' ' + NATIVE().or + ' ')
     .replace(/\s*;\s*/g, ', ').replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
 }
 // does another card in the same level share a Ukrainian meaning with this one?
@@ -909,13 +986,13 @@ function needsLetter(w){
 }
 function letterText(w){
   const t = w.en[0], n = t.split(' ').length;
-  return t[0].toUpperCase() + '…' + (n > 1 ? ' · ' + n + ' слова' : '');
+  return t[0].toUpperCase() + '…' + (n > 1 ? ' · ' + n + ' words' : '');
 }
 async function sayLetter(w){
   const t = w.en[0], n = t.split(' ').length;
-  await speak('Англійською на літеру', 'uk-UA');
+  await speak('Starts with', EN());
   await speak(t[0].toUpperCase(), EN());
-  if (n > 1) await speak(n + (n < 5 ? ' слова' : ' слів'), 'uk-UA');
+  if (n > 1) await speak(n + ' words', EN());
 }
 function wordLine(w){ return speakable(w.uk) + '. ' + speakable(w.hint).replace(/^./, c => c.toUpperCase()) + '.'; }
 // get audio ready ahead of time so the app answers without pauses
@@ -932,23 +1009,23 @@ function pumpWarm(){
 }
 function warmWord(w){
   if (!w) return;
-  if (db.settings.hints && w.hint) warm(wordLine(w), 'uk-UA'); else warm(speakable(w.uk), 'uk-UA');
+  if (db.settings.hints && w.hint) warm(wordLine(w), NL()); else warm(speakable(w.uk), NL());
   warm(w.en[0], EN());
 }
 function warmPhrases(){
-  [...PRAISE, ...WRONG, ...DUNNO, ...REPEAT_OK, ...REPEAT_LATER, ...Object.values(STREAK)].forEach(t => warm(t, 'uk-UA'));
+  [...PRAISE, ...WRONG, ...DUNNO, ...REPEAT_OK, ...REPEAT_LATER, ...Object.values(STREAK)].forEach(t => warm(t, EN()));
 }
 async function sayPick(w, step){
-  if (oaOn('oaVoice') && db.settings.hints && w.hint) return speak(wordLine(w), 'uk-UA');
-  await speak(speakable(w.uk), 'uk-UA');
-  if (db.settings.hints && w.hint && alive(step) && !session.locked){ await wait(200); if (alive(step) && !session.locked) await speak(speakable(w.hint), 'uk-UA'); }
+  if (oaOn('oaVoice') && db.settings.hints && w.hint) return speak(wordLine(w), NL());
+  await speak(speakable(w.uk), NL());
+  if (db.settings.hints && w.hint && alive(step) && !session.locked){ await wait(200); if (alive(step) && !session.locked) await speak(speakable(w.hint), NL()); }
 }
 async function sayWord(w, prefix = ''){
-  if (prefix) { await speak(prefix, 'uk-UA'); await wait(150); }
-  if (oaOn('oaVoice') && db.settings.hints && w.hint) await speak(wordLine(w), 'uk-UA');
+  if (prefix) { await speak(prefix, EN()); await wait(150); }
+  if (oaOn('oaVoice') && db.settings.hints && w.hint) await speak(wordLine(w), NL());
   else {
-    await speak(speakable(w.uk), 'uk-UA');
-    if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), 'uk-UA'); }
+    await speak(speakable(w.uk), NL());
+    if (db.settings.hints && w.hint){ await wait(350); await speak(speakable(w.hint), NL()); }
   }
   if (needsLetter(w)){ await wait(250); await sayLetter(w); }
 }
@@ -963,22 +1040,22 @@ async function presentItem(){
   $('phaseLabel').textContent = PHASE[it.phase];
   $('counter').textContent = (session.i + 1) + ' / ' + session.queue.length;
   $('word').textContent = w.uk;
-  $('hint').textContent = [w.hint, needsLetter(w) ? 'англ.: ' + letterText(w) : ''].filter(Boolean).join(' · ');
+  $('hint').textContent = [w.hint, needsLetter(w) ? 'EN: ' + letterText(w) : ''].filter(Boolean).join(' · ');
   $('feedback').className = 'feedback'; $('feedback').innerHTML = ''; $('choices').innerHTML = '';
-  $('mic').hidden = pickMode();
+  $('mic').hidden = pickMode(); $('typeBtn').hidden = pickMode(); $('cmdHint').hidden = pickMode();
   $('dunnoBtn').hidden = false; $('typedInput').value = '';
   setStatus('');
-  const lead = it.phase === 'retry' && session.firstRetry !== false ? 'Ще раз слова з помилками. ' : '';
+  const lead = it.phase === 'retry' && session.firstRetry !== false ? 'Mistakes again. ' : '';
   if (it.phase === 'retry') session.firstRetry = false;
   if (pickMode()){ pickRound(step); sayPick(w, step); for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); } return; }
-  if (lead) await speak(lead, 'uk-UA');
+  if (lead) await speak(lead, EN());
   if (!alive(step)) return;
   await sayWord(w);
   const nx = session.queue[session.i + 1] && db.words.find(x => x.id === session.queue[session.i + 1].id);
   for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); }
   if (!alive(step)) return;
   if (pickMode()) return pickRound(step);
-  if (session.tapMode) setStatus('Натисніть мікрофон і скажіть переклад');
+  if (session.tapMode) setStatus('Tap the microphone and say the translation');
   else listenLoop(step);
 }
 function advance(){ if (!session) return; session.i++; presentItem(); }
@@ -987,28 +1064,28 @@ function setStatus(t){ $('status').textContent = t; }
 async function listenLoop(step){
   const myId = session.listenId = (session.listenId || 0) + 1;
   const mine = () => alive(step) && !session.locked && session.listenId === myId;
-  if (!SR && !oaOn('oaEars')){ setStatus('Браузер не розпізнає голос. Введіть переклад текстом'); $('typedForm').classList.add('show'); return; }
+  if (!SR && !oaOn('oaEars')){ setStatus('This browser cannot recognise speech. Type the translation'); $('typedForm').classList.add('show'); return; }
   const { w } = current();
   let silent = 0, reprompts = 0, deaf = 0, choiceOffered = false;
   listenHook = (t, x) => {
     if (!mine()) return;
-    if (t === 'audio') setStatus('Слухаю… говоріть');
-    if (t === 'interim') setStatus('Чую: «' + x + '»');
+    if (t === 'audio') setStatus('Listening… speak now');
+    if (t === 'interim') setStatus('Hearing: “' + x + '”');
   };
   while (mine()){
-    setStatus(session.tapMode ? 'Слухаю… говоріть' : 'Вмикаю мікрофон…');
+    setStatus(session.tapMode ? 'Listening… speak now' : 'Turning on the microphone…');
     await wait(session.tapMode ? 0 : 500); // let the speech engine release audio first
     if (!mine()) return;
     let heard;
     try { heard = await listen(); deaf = 0; }
     catch (err) {
       if (!mine()) return;
-      if (session.tapMode){ setStatus('Не почув. Натисніть мікрофон і скажіть ще раз'); return; }
+      if (session.tapMode){ setStatus('Did not hear you. Tap the microphone and try again'); return; }
       if (err === 'no-audio' || err === 'start-failed' || err === 'audio-capture'){
         if (++deaf >= 2){
           session.tapMode = true;
-          setStatus('Мікрофон не вмикається сам. Натискайте мікрофон перед відповіддю');
-          await speak('Натисніть на мікрофон і скажіть переклад.', 'uk-UA');
+          setStatus('The microphone does not start by itself. Tap it before answering');
+          await speak('Tap the microphone and say the translation.', EN());
           return;
         }
         continue;
@@ -1016,27 +1093,27 @@ async function listenLoop(step){
       if (err === 'no-speech' || err === 'aborted'){
         if (++silent < 3) continue;
         silent = 0;
-        if (++reprompts >= 2){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
-        await sayWord(w, 'Повторю.');
+        if (++reprompts >= 2){ pauseSession('Paused. Tap the microphone to continue', true); return; }
+        await sayWord(w, 'Again.');
         continue;
       }
       const msg = {
-        'not-allowed': 'Мікрофон заблоковано. Дозвольте доступ у налаштуваннях браузера',
-        'service-not-allowed': 'Сервіс розпізнавання мовлення недоступний на цьому телефоні',
-        'network': 'Немає інтернету для розпізнавання. Введіть текстом'
-      }[err] || ('Не вдалося розпізнати мову (' + err + ')');
+        'not-allowed': 'Microphone blocked. Allow access in the browser settings',
+        'service-not-allowed': 'Speech recognition is not available on this phone',
+        'network': 'No internet for recognition. Type instead'
+      }[err] || ('Could not recognise speech (' + err + ')');
       session.paused = true; setStatus(msg); $('typedForm').classList.add('show');
       return;
     }
     if (!mine()) return;
     if (isCorrect(heard, w) || synonymHit(heard, w)) return handleAnswer(heard, heard[0]);
     const cmd = command(heard);
-    if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue; }
+    if (cmd === 'repeat'){ await sayWord(w); if (session && session.tapMode){ setStatus('Tap the microphone and say the translation'); return; } continue; }
     if (cmd === 'hint'){
-      $('hint').textContent = [w.hint, 'англ.: ' + letterText(w)].filter(Boolean).join(' · ');
-      await sayLetter(w); if (session && session.tapMode){ setStatus('Натисніть мікрофон і скажіть переклад'); return; } continue;
+      $('hint').textContent = [w.hint, 'EN: ' + letterText(w)].filter(Boolean).join(' · ');
+      await sayLetter(w); if (session && session.tapMode){ setStatus('Tap the microphone and say the translation'); return; } continue;
     }
-    if (cmd === 'stop'){ pauseSession('Пауза. Натисніть мікрофон, щоб продовжити', true); return; }
+    if (cmd === 'stop'){ pauseSession('Paused. Tap the microphone to continue', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
     if (db.settings.choices !== false && !choiceOffered){
       choiceOffered = true;
@@ -1062,6 +1139,7 @@ function lev(a, b){
   return prev[n];
 }
 function posUk(w){
+  if (NATIVE_CODE !== 'uk') return 'n';   // Ukrainian grammar only; other languages rely on look-alike + topic
   const m = meanings(w)[0] || '', last = m.split(' ').pop();
   if (/(ти|тися|тись|чи)$/.test(last)) return 'v';
   if (/(ий|ій|ся)$/.test(last) && !/тися$/.test(last)) return 'a';
@@ -1108,7 +1186,7 @@ function pickRound(step){
   const { w } = current();
   const opts = [w.en[0], ...hardDistractors(w)].sort(() => Math.random() - 0.5);
   $('choices').innerHTML = opts.map((o, i) => `<button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button>`).join('');
-  setStatus('Оберіть переклад');
+  setStatus('Choose the translation');
   $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => {
     if (!alive(step) || session.locked) return;
     const chosen = opts[+b.dataset.i], ok = w.en.includes(chosen);
@@ -1152,27 +1230,27 @@ function askChoice(w, heard, stillMine){
   return new Promise(async resolve => {
     let done = false;
     const finish = v => { if (done) return; done = true; stopListening(); hush(); $('choices').innerHTML = ''; resolve(v); };
-    $('choices').innerHTML = `<p class="small muted" style="margin:0 0 8px">Почув «${esc(heard[0])}». Який варіант ви сказали?</p>` +
+    $('choices').innerHTML = `<p class="small muted" style="margin:0 0 8px">Heard “${esc(heard[0])}”. Which one did you say?</p>` +
       opts.map((o, i) => `<button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button>`).join('');
     $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => finish(opts[+b.dataset.i]));
-    setStatus('Скажіть «one», «two» чи «three» або натисніть');
+    setStatus('Say “one”, “two” or “three”, or tap');
     if (!session.tapMode){
-      await speak('Не впевнений, що розчув. Який варіант?', 'uk-UA');
+      await speak('Not sure I heard you. Which one?', EN());
       for (let i = 0; i < opts.length && !done && stillMine(); i++){
-        await speak(['Один', 'Два', 'Три'][i], 'uk-UA');
+        await speak(['One', 'Two', 'Three'][i], EN());
         if (!done && stillMine()) await speak(opts[i], EN());
         await wait(150);
       }
       for (let t = 0; t < 3 && !done && stillMine(); t++){
-        setStatus('Слухаю номер варіанта…');
+        setStatus('Listening for the number…');
         try {
           const h = await listen(8000);
           const idx = parseChoice(h, opts);
           if (idx != null) return finish(opts[idx]);
-          setStatus('Скажіть «one», «two» чи «three» або натисніть');
+          setStatus('Say “one”, “two” or “three”, or tap');
         } catch(e){ if (e === 'aborted') break; }
       }
-      if (!done && stillMine()) setStatus('Натисніть на варіант, який ви сказали');
+      if (!done && stillMine()) setStatus('Tap the option you said');
     }
     // stop waiting if the session moved on (pause, next word, end)
     const guard = setInterval(() => { if (!stillMine()){ clearInterval(guard); finish(null); } if (done) clearInterval(guard); }, 400);
@@ -1183,13 +1261,13 @@ function pauseSession(msg, spoken){
   if (!session || session.paused) return;
   session.paused = true; stopListening();
   hush();
-  setStatus(msg); $('pauseBtn').textContent = 'Продовжити';
-  if (spoken) speak('Пауза. Торкніться екрана, коли будете готові.', 'uk-UA');
+  setStatus(msg); $('pauseBtn').textContent = 'Resume';
+  if (spoken) speak('Paused. Tap the screen when you are ready.', EN());
 }
 function resumeSession(){
   if (!session) return;
   session.paused = false; keepAwake();
-  $('pauseBtn').textContent = 'Пауза';
+  $('pauseBtn').textContent = 'Pause';
   if (session.locked) advance(); else presentItem();
 }
 
@@ -1237,11 +1315,11 @@ async function handleAnswer(heard, shown){
   const fb = $('feedback');
   fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
   if (pickMode() && !ok && shown) heard = [shown];
-  fb.innerHTML = `<strong>${syn ? 'Теж підходить' : ok ? 'Правильно' : (heard ? 'Не зовсім' : 'Правильна відповідь')}</strong>` +
+  fb.innerHTML = `<strong>${syn ? 'Also correct' : ok ? 'Correct' : (heard ? 'Not quite' : 'Answer')}</strong>` +
     `<span>${esc(w.en.join(', '))}</span>` +
-    (shown && !ok && !pickMode() ? `<div class="small muted">Почув: «${esc(shown)}»</div><button class="btn" id="overBtn" style="margin-top:8px">Я сказав правильно</button>` : '');
+    (shown && !ok && !pickMode() ? `<div class="small muted">Heard: “${esc(shown)}”</div><button class="btn" id="overBtn" style="margin-top:8px">I said it right</button>` : '');
   const ob = $('overBtn');
-  if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Зараховано</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Зараховано як правильну відповідь'); } };
+  if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Counted</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Counted as correct'); } };
   $('dunnoBtn').hidden = true;
 
   if (pickMode()){
@@ -1256,30 +1334,30 @@ async function handleAnswer(heard, shown){
   if (syn){
     setStatus('');
     session.streak = (session.streak || 0) + 1;
-    await speak('Теж підходить! Але тут я мав на увазі:', 'uk-UA');
+    await speak('Also correct! But here I meant:', EN());
     if (alive(step)) await speak(w.en[0], EN());
   } else if (ok){
     setStatus('');
     session.streak = (session.streak || 0) + 1;
-    await speak(STREAK[session.streak] || pick(PRAISE), 'uk-UA');
+    await speak(STREAK[session.streak] || pick(PRAISE), EN());
     const said = pickHeardVariant(heard, w);
     const others = w.en.filter(v => v !== said).slice(0, 2);
     if (it.phase === 'new' && others.length && alive(step)){
-      await speak('Також можна:', 'uk-UA');
+      await speak('Also:', EN());
       if (alive(step)) await speak(others.join(', '), EN());
     }
   } else {
-    setStatus(pickMode() ? '' : 'Повторіть правильний варіант уголос');
+    setStatus(pickMode() ? '' : 'Say the correct answer aloud');
     session.streak = 0;
-    await speak(pick(heard ? WRONG : DUNNO), 'uk-UA');
+    await speak(pick(heard ? WRONG : DUNNO), EN());
     if (!alive(step)) return;
     await speak(w.en[0], EN());
     if (!alive(step)) return;
-    if (!pickMode()) await speak(pick(['Повторіть, будь ласка.', 'Скажіть це ще раз.', 'Спробуйте вимовити.']), 'uk-UA');
+    if (!pickMode()) await speak(pick(['Say it, please.', 'Say it again.', 'Try saying it.']), EN());
     if (!pickMode() && alive(step) && (SR || oaOn('oaEars')) && !session.tapMode){
       try {
         const again = await listen(7000);
-        if (alive(step)) await speak(isCorrect(again, w) ? pick(REPEAT_OK) : pick(REPEAT_LATER), 'uk-UA');
+        if (alive(step)) await speak(isCorrect(again, w) ? pick(REPEAT_OK) : pick(REPEAT_LATER), EN());
       } catch(e){}
     }
   }
@@ -1293,74 +1371,74 @@ let lastSession = null;
 function renderSummaryList(){
   const s = lastSession; if (!s) return;
   const total = Object.keys(s.graded).length;
-  $('sumText').textContent = `Правильно з першої спроби: ${s.right} з ${total}.` + (s.mistakes.length ? ' Ці слова з\'являться першими в наступному повторенні. Якщо додаток вас не так почув — натисніть ✓.' : '');
+  $('sumText').textContent = `Correct on first try: ${s.right} of ${total}.` + (s.mistakes.length ? ' These words will come first next time. If the app misheard you, tap ✓.' : '');
   $('sumList').innerHTML = s.mistakes.map(id => { const w = db.words.find(x=>x.id===id);
-    return w ? `<li style="display:flex;align-items:center;gap:8px"><span style="flex:1"><b>${esc(w.uk)}</b> — ${esc(w.en.join(', '))}</span><button class="icon-btn" data-ok="${w.id}" aria-label="Я сказав правильно" title="Я сказав правильно">✓</button></li>` : ''; }).join('');
+    return w ? `<li style="display:flex;align-items:center;gap:8px"><span style="flex:1"><b>${esc(w.uk)}</b> — ${esc(w.en.join(', '))}</span><button class="icon-btn" data-ok="${w.id}" aria-label="I said it right" title="I said it right">✓</button></li>` : ''; }).join('');
 }
 $('sumList').onclick = e => {
   const id = e.target.dataset.ok; if (!id || !lastSession) return;
   const w = db.words.find(x => x.id === id);
-  if (w && overrule(lastSession, w)){ renderSummaryList(); toast('Зараховано'); }
+  if (w && overrule(lastSession, w)){ renderSummaryList(); toast('Counted'); }
 };
 function endSession(){ stopListening(); hush(); releaseAwake(); releaseMic(); session = null; }
 function finishSession(){
   const s = session; endSession();
   $('bar').style.width = '100%';
   const total = Object.keys(s.graded).length;
-  $('sumTitle').textContent = s.mistakes.length ? 'Сесію завершено' : 'Без жодної помилки';
-  $('sumText').textContent = `Правильно з першої спроби: ${s.right} з ${total}.` +
-    (s.mistakes.length ? ' Ці слова з\'являться першими в наступному повторенні:' : '');
+  $('sumTitle').textContent = s.mistakes.length ? 'Session complete' : 'No mistakes at all';
+  $('sumText').textContent = `Correct on first try: ${s.right} of ${total}.` +
+    (s.mistakes.length ? ' These words will come first next time:' : '');
   lastSession = s;
   renderSummaryList();
   show('summary');
   const pct = total ? s.right / total : 0;
-  const mood = pct >= 0.9 ? 'Блискуче!' : pct >= 0.7 ? 'Гарна робота!' : pct >= 0.5 ? 'Непогано!' : 'Головне — регулярність.';
-  if (!pickMode()) speak(total ? `${mood} Правильно ${s.right} з ${total}.` + (s.mistakes.length ? ' Складні слова повторимо наступного разу. До зустрічі!' : ' Жодної помилки! До зустрічі!') : 'До зустрічі!', 'uk-UA');
+  const mood = pct >= 0.9 ? 'Brilliant!' : pct >= 0.7 ? 'Good job!' : pct >= 0.5 ? 'Not bad!' : 'Keep practising.';
+  if (!pickMode()) speak(total ? `${mood} ${s.right} of ${total} correct.` + (s.mistakes.length ? ' We will review the hard ones next time. See you!' : ' No mistakes! See you!') : 'See you!', EN());
 }
 
 $('startBtn').onclick = startSession;
 $('soundTest').onclick = async () => {
   const out = $('micTestOut');
   loadVoices();
-  const uk = pickVoice('uk-UA'), en = pickVoice(EN());
+  const uk = pickVoice(NL()), en = pickVoice(EN());
   const lines = [
-    'Адреса: ' + location.href,
-    'Захищене з\'єднання (https): ' + (window.isSecureContext ? 'так' : 'НІ — голос не працюватиме'),
-    'Озвучення в браузері: ' + (hasTTS ? 'є' : 'НЕМАЄ'),
-    'Голосів на телефоні: ' + voices.length,
-    'Український голос: ' + (uk ? uk.name : 'не знайдено'),
-    'Англійський голос: ' + (en ? en.name : 'не знайдено'),
-    'Розпізнавання мовлення: ' + (SR ? 'є' : 'НЕМАЄ')
+    'Address: ' + location.href,
+    'Secure connection (https): ' + (window.isSecureContext ? 'yes' : 'NO — voice will not work'),
+    'Speech in browser: ' + (hasTTS ? 'yes' : 'NO'),
+    'Voices on phone: ' + voices.length,
+    'Your-language voice: ' + (uk ? uk.name : 'not found'),
+    'English voice: ' + (en ? en.name : 'not found'),
+    'Speech recognition: ' + (SR ? 'yes' : 'NO')
   ];
-  out.innerHTML = lines.map(esc).join('<br>') + '<br>Зараз має прозвучати фраза українською, а потім англійською…';
+  out.innerHTML = lines.map(esc).join('<br>') + '<br>You should now hear a phrase in your language, then in English…';
   if (!hasTTS) return;
   let started = false;
-  const u = new SpeechSynthesisUtterance('Перевірка звуку. Раз, два, три.');
-  u.lang = 'uk-UA'; if (uk) u.voice = uk;
+  const u = new SpeechSynthesisUtterance(NATIVE().test);
+  u.lang = NL(); if (uk) u.voice = uk;
   u.onstart = () => { started = true; };
   speechSynthesis.cancel(); speechSynthesis.speak(u);
   setTimeout(() => { const e = new SpeechSynthesisUtterance('Sound check. One, two, three.'); e.lang = 'en-US'; if (en) e.voice = en; e.onstart = () => { started = true; }; speechSynthesis.speak(e); }, 100);
-  setTimeout(() => { out.innerHTML += '<br><b>' + (started ? 'Озвучення запустилось. Якщо нічого не чутно — перевірте гучність медіа.' : 'Озвучення НЕ запустилось.') + '</b>'; }, 5000);
+  setTimeout(() => { out.innerHTML += '<br><b>' + (started ? 'Speech started. If you hear nothing, check the media volume.' : 'Speech did NOT start.') + '</b>'; }, 5000);
 };
 $('micTest').onclick = async () => {
   const out = $('micTestOut');
-  if (!SR && !oaOn('oaEars')){ out.textContent = 'Цей браузер не підтримує розпізнавання мовлення.'; return; }
-  out.textContent = 'Скажіть англійською: «hello world»…';
+  if (!SR && !oaOn('oaEars')){ out.textContent = 'This browser does not support speech recognition.'; return; }
+  out.textContent = 'Say in English: “hello world”…';
   listenHook = (t, x) => {
-    if (t === 'audio') out.textContent = 'Мікрофон увімкнено. Говоріть…';
-    if (t === 'interim') out.textContent = 'Чую: «' + x + '»';
+    if (t === 'audio') out.textContent = 'Microphone on. Speak…';
+    if (t === 'interim') out.textContent = 'Hearing: “' + x + '”';
   };
   try {
     const heard = await listen(10000);
-    out.textContent = 'Працює! Розпізнано: «' + heard[0] + '»';
+    out.textContent = 'Works! Recognised: “' + heard[0] + '”';
   } catch (err) {
     out.textContent = {
-      'no-audio': 'Мікрофон так і не увімкнувся. Перевірте, чи увімкнений застосунок Google і сервіс розпізнавання мовлення від Google.',
-      'no-speech': 'Мікрофон увімкнувся, але мови не почув. Спробуйте говорити голосніше або ближче.',
-      'not-allowed': 'Доступ до мікрофона заблоковано. Дозвольте його в налаштуваннях сайту в Chrome.',
-      'service-not-allowed': 'Сервіс розпізнавання недоступний. Перевірте застосунок Google.',
-      'network': 'Немає зв\'язку з сервером розпізнавання. Перевірте інтернет.'
-    }[err] || ('Помилка: ' + err);
+      'no-audio': 'The microphone never started. Check that the Google app and Google speech services are enabled.',
+      'no-speech': 'The microphone started but heard no speech. Try speaking louder or closer.',
+      'not-allowed': 'Microphone access is blocked. Allow it in Chrome site settings.',
+      'service-not-allowed': 'Recognition service unavailable. Check the Google app.',
+      'network': 'Cannot reach the recognition server. Check your internet.'
+    }[err] || ('Error: ' + err);
   } finally { listenHook = null; }
 };
 $('mic').onclick = () => {
@@ -1374,8 +1452,8 @@ $('mic').onclick = () => {
 $('pauseBtn').onclick = () => {
   if (!session) return;
   if (session.paused) resumeSession();
-  else pauseSession('Пауза. Натисніть «Продовжити» або мікрофон', false);
-  $('pauseBtn').textContent = session && session.paused ? 'Продовжити' : 'Пауза';
+  else pauseSession('Paused. Tap Resume or the microphone', false);
+  $('pauseBtn').textContent = session && session.paused ? 'Resume' : 'Pause';
 };
 $('repeatBtn').onclick = async () => {
   if (!session || session.locked) return;
@@ -1387,7 +1465,7 @@ $('repeatBtn').onclick = async () => {
 $('dunnoBtn').onclick = () => { if (session){ session.paused = false; handleAnswer(null, ''); } };
 $('typeBtn').onclick = () => {
   const f = $('typedForm'); f.classList.toggle('show');
-  if (f.classList.contains('show')) { pauseSession('Введіть переклад і натисніть «Перевірити»', false); $('typedInput').focus(); }
+  if (f.classList.contains('show')) { pauseSession('Type the translation and tap Check', false); $('typedInput').focus(); }
 };
 $('typedForm').onsubmit = e => {
   e.preventDefault(); const v = $('typedInput').value.trim();
@@ -1402,41 +1480,43 @@ function renderStart(){
   activeWords().forEach(w => { const s = status(w); if (s==='weak') c.weak++; if (s==='known') c.known++; });
   const due = dueWords().length, fresh = Math.min(newWords().length, db.settings.newPer);
   $('stats').innerHTML = `
-    <div class="stat"><b>${c.all}</b><span>усього</span></div>
-    <div class="stat"><b>${c.known}</b><span>вивчено</span></div>
-    <div class="stat weak"><b>${c.weak}</b><span>погано знаю</span></div>
-    <div class="stat"><b>${due}</b><span>повторити</span></div>`;
-  $('plan').textContent = (fresh || due) ? `Сьогодні: ${fresh} нових слів і ${due} на повторення.` : 'На сьогодні все повторено. Додайте нові слова або поверніться завтра.';
+    <div class="stat"><b>${c.all}</b><span>total</span></div>
+    <div class="stat"><b>${c.known}</b><span>learned</span></div>
+    <div class="stat weak"><b>${c.weak}</b><span>weak</span></div>
+    <div class="stat"><b>${due}</b><span>to review</span></div>`;
+  $('plan').textContent = (fresh || due) ? `Today: ${fresh} new words and ${due} to review.` : 'All done for today. Add new words or come back tomorrow.';
   $('startBtn').disabled = !(fresh || due);
   const notes = [];
-  if (!SR && !oaOn('oaEars')) notes.push('Цей браузер не розпізнає голос — відповідайте текстом. Найкраще працює Chrome.');
-  if (!hasTTS) notes.push('Озвучення недоступне в цьому браузері.');
-  else if (voices.length && !pickVoice('uk-UA')) notes.push('Українського голосу не знайдено — встановіть його в налаштуваннях синтезу мовлення телефону.');
+  if (!SR && !oaOn('oaEars')) notes.push('This browser cannot recognise speech. Chrome works best.');
+  if (!hasTTS) notes.push('Speech is not available in this browser.');
+  else if (voices.length && !pickVoice(NL())) notes.push('No voice found for your language. Install it in your phone\'s text-to-speech settings.');
   $('support').textContent = notes.join(' ');
   $('setNew').value = String(db.settings.newPer);
   $('setHints').value = db.settings.hints ? '1' : '0';
   $('setRate').value = String(db.settings.rate || 1);
   $('setSecond').value = db.settings.choices === false ? '0' : '1';
   $('setMode').value = db.settings.mode || 'pick';
+  $('setNative').innerHTML = Object.entries(NATIVES).map(([k, v]) => `<option value="${k}" ${v.ready ? '' : 'disabled'}>${esc(v.name)}${v.ready ? '' : ' · soon'}</option>`).join('');
+  $('setNative').value = NATIVE_CODE;
   $('setLetter').value = db.settings.letterCue || 'off';
   renderOA();
   $('setAccent').value = EN();
-  [['voiceUk','uk-UA'],['voiceEn',EN()]].forEach(([id, lang]) => {
+  [['voiceUk',NL()],['voiceEn',EN()]].forEach(([id, lang]) => {
     const list = voicesFor(lang).sort((a,b) => voiceScore(b,lang) - voiceScore(a,lang));
     const cur = pickVoice(lang);
-    $(id).innerHTML = list.length ? list.map(v => `<option value="${esc(v.name)}">${esc(v.name.replace(/\s*\(.*?\)\s*/g,' ').trim())}${v.localService ? '' : ' ☁'}</option>`).join('') : '<option value="">немає голосу</option>';
+    $(id).innerHTML = list.length ? list.map(v => `<option value="${esc(v.name)}">${esc(v.name.replace(/\s*\(.*?\)\s*/g,' ').trim())}${v.localService ? '' : ' ☁'}</option>`).join('') : '<option value="">no voice</option>';
     if (cur) $(id).value = cur.name;
   });
   $('packRows').innerHTML = PACK_ORDER.map(p => {
     const n = db.words.filter(w => (w.pack || 'mine') === p).length;
-    return `<div class="setting"><span>${PACK_INFO[p]} <span class="muted small">${n} слів</span></span>
-      <select data-pack="${p}"><option value="1">Вчу</option><option value="0">Вимкнено</option></select></div>`;
+    return `<div class="setting"><span>${PACK_INFO[p]} <span class="muted small">${n} words</span></span>
+      <select data-pack="${p}"><option value="1">Learning</option><option value="0">Off</option></select></div>`;
   }).join('');
   $('packRows').querySelectorAll('select').forEach(sel => {
     sel.value = db.settings.packs[sel.dataset.pack] ? '1' : '0';
     sel.onchange = () => {
       const next = { ...db.settings.packs, [sel.dataset.pack]: sel.value === '1' };
-      if (!Object.values(next).some(Boolean)){ sel.value = '1'; toast('Залиште увімкненим хоча б один рівень'); return; }
+      if (!Object.values(next).some(Boolean)){ sel.value = '1'; toast('Keep at least one level on'); return; }
       db.settings.packs = next; save(); renderStart();
     };
   });
@@ -1445,7 +1525,7 @@ $('setNew').onchange = e => { db.settings.newPer = +e.target.value; save(); rend
 $('setHints').onchange = e => { db.settings.hints = e.target.value === '1'; save(); };
 function renderOA(){
   const has = !!db.settings.oaKey;
-  $('oaKey').value = ''; $('oaKey').placeholder = has ? 'ключ збережено · ' + db.settings.oaKey.slice(0, 7) + '…' + db.settings.oaKey.slice(-4) : 'sk-...';
+  $('oaKey').value = ''; $('oaKey').placeholder = has ? 'key saved · ' + db.settings.oaKey.slice(0, 7) + '…' + db.settings.oaKey.slice(-4) : 'sk-...';
   $('oaOpts').hidden = !has;
   $('oaVoiceName').value = db.settings.oaVoiceName || 'coral';
   $('oaVoice').value = db.settings.oaVoice === false ? '0' : '1';
@@ -1455,44 +1535,45 @@ function renderOA(){
 }
 $('oaSave').onclick = async () => {
   const k = $('oaKey').value.trim();
-  if (!k){ if (db.settings.oaKey && confirm('Видалити збережений ключ?')){ delete db.settings.oaKey; save(); renderOA(); toast('Ключ видалено'); } return; }
-  $('oaStatus').textContent = 'Перевіряю ключ…';
+  if (!k){ if (db.settings.oaKey && confirm('Delete the saved key?')){ delete db.settings.oaKey; save(); renderOA(); toast('Key deleted'); } return; }
+  $('oaStatus').textContent = 'Checking the key…';
   try {
     const r = await fetch(OA + '/models', { headers: { 'Authorization': 'Bearer ' + k } });
-    if (r.status === 401) throw new Error('Ключ не підходить. Перевірте, що скопіювали його повністю.');
-    if (!r.ok) throw new Error('OpenAI відповів помилкою ' + r.status + '.');
+    if (r.status === 401) throw new Error('The key is not valid. Make sure you copied it completely.');
+    if (!r.ok) throw new Error('OpenAI returned error ' + r.status + '.');
     db.settings.oaKey = k; save(); renderOA();
-    $('oaStatus').textContent = 'Ключ працює. Натисніть ▶, щоб почути голос.';
-  } catch(e){ $('oaStatus').textContent = (e.message || 'Немає зв\'язку з OpenAI.'); }
+    $('oaStatus').textContent = 'The key works. Tap ▶ to hear the voice.';
+  } catch(e){ $('oaStatus').textContent = (e.message || 'No connection to OpenAI.'); }
 };
 $('oaVoiceName').onchange = e => { db.settings.oaVoiceName = e.target.value; save(); $('oaTry').click(); };
 $('oaVoice').onchange = e => { db.settings.oaVoice = e.target.value === '1'; save(); };
 $('oaEars').onchange = e => { db.settings.oaEars = e.target.value === '1'; save(); };
 $('oaModel').onchange = e => { db.settings.oaModel = e.target.value; save(); };
 $('oaTry').onclick = async () => {
-  $('oaStatus').textContent = 'Завантажую голос…';
+  $('oaStatus').textContent = 'Loading voice…';
   try {
-    const b1 = await oaTTS('Привіт! Я допоможу вам вивчати англійські слова. Готові?', 'uk-UA');
+    const b1 = await oaTTS(NATIVE().hello, NL());
     const b2 = await oaTTS('Great job! Let\'s practise some new words.', EN());
     $('oaStatus').textContent = '';
     await playBlob(b1); await playBlob(b2);
-  } catch(e){ $('oaStatus').textContent = /429/.test(String(e)) ? 'Потрібно поповнити баланс OpenAI (Billing → Add credits).' : 'Не вдалося: ' + e.message; }
+  } catch(e){ $('oaStatus').textContent = /429/.test(String(e)) ? 'Top up your OpenAI balance (Billing → Add credits).' : 'Failed: ' + e.message; }
 };
 $('setLetter').onchange = e => { db.settings.letterCue = e.target.value; save(); };
 $('setSecond').onchange = e => { db.settings.choices = e.target.value === '1'; save(); };
 $('setMode').onchange = e => { db.settings.mode = e.target.value; save(); };
-$('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak('Так звучить нова швидкість.', 'uk-UA'); };
-$('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak('Привіт! Так звучить цей голос.', 'uk-UA'); };
+$('setNative').onchange = e => switchNative(e.target.value);
+$('setRate').onchange = e => { db.settings.rate = +e.target.value; save(); speak(NATIVE().test, NL()); };
+$('voiceUk').onchange = e => { db.settings.voiceUk = e.target.value; save(); speak(NATIVE().test, NL()); };
 $('voiceEn').onchange = e => { db.settings.voiceEn = e.target.value; save(); speak('Hi! This is how this voice sounds.', EN()); };
 $('setAccent').onchange = e => { db.settings.accent = e.target.value; db.settings.voiceEn = ''; save(); renderStart(); speak('Hi! This is how I will sound now.', EN()); };
-$('tryUk').onclick = () => speak('Привіт! Так звучить цей голос.', 'uk-UA');
+$('tryUk').onclick = () => speak(NATIVE().test, NL());
 $('tryEn').onclick = () => speak('Hi! This is how this voice sounds.', EN());
 
 /* ---------- Install as app ---------- */
 let installEvt = null;
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!standalone()) $('installBtn').hidden = false; });
-window.addEventListener('appinstalled', () => { $('installBtn').hidden = true; toast('Додаток встановлено'); });
+window.addEventListener('appinstalled', () => { $('installBtn').hidden = true; toast('App installed'); });
 $('installBtn').onclick = async () => {
   if (!installEvt) return;
   installEvt.prompt();
@@ -1508,21 +1589,21 @@ function renderList(){
   const items = db.words.filter(w => (filter === 'all' || status(w) === filter) && (pf === 'all' || (w.pack || 'mine') === pf) &&
     (!q || w.uk.toLowerCase().includes(q) || w.en.join(' ').toLowerCase().includes(q)))
     .sort((a,b) => (PACK_ORDER.indexOf(a.pack || 'mine') - PACK_ORDER.indexOf(b.pack || 'mine')) || (b.added - a.added));
-  $('listTitle').textContent = `Мої слова (${db.words.length})`;
+  $('listTitle').textContent = `My words (${db.words.length})`;
   $('list').innerHTML = items.length ? items.map(w => `
-    <li><span class="dot ${status(w)}" title="${{new:'Нове',weak:'Погано знаю',learning:'Вчу',known:'Вивчене'}[status(w)]}"></span>
+    <li><span class="dot ${status(w)}" title="${{new:'New',weak:'Weak',learning:'Learning',known:'Learned'}[status(w)]}"></span>
       <div class="txt"><div class="uk">${esc(w.uk)} <span class="tag">${PACK_SHORT[w.pack || 'mine']}</span></div><div class="en">${esc(w.en.join(', '))}</div>${w.hint ? `<div class="hn">${esc(w.hint)}</div>` : ''}</div>
-      <button class="icon-btn" data-edit="${w.id}" aria-label="Змінити пояснення" title="Змінити пояснення">✎</button>
-      <button class="icon-btn" data-reset="${w.id}" aria-label="Почати вчити заново" title="Почати вчити заново">↺</button>
-      <button class="icon-btn" data-del="${w.id}" aria-label="Видалити" title="Видалити">×</button></li>`).join('')
-    : `<li class="muted">${q || filter!=='all' ? 'Нічого не знайдено.' : 'Список порожній. Додайте перше слово вище.'}</li>`;
+      <button class="icon-btn" data-edit="${w.id}" aria-label="Edit explanation" title="Edit explanation">✎</button>
+      <button class="icon-btn" data-reset="${w.id}" aria-label="Learn again" title="Learn again">↺</button>
+      <button class="icon-btn" data-del="${w.id}" aria-label="Delete" title="Delete">×</button></li>`).join('')
+    : `<li class="muted">${q || filter!=='all' ? 'Nothing found.' : 'The list is empty. Add your first word above.'}</li>`;
 }
 $('list').onclick = e => {
   const ed = e.target.dataset.edit;
-  if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ const h = prompt('Коротке пояснення до «' + w.uk + '» (' + w.en[0] + '):', w.hint || ''); if (h !== null){ w.hint = h.trim(); w.hintAuto = false; save(); renderList(); } } return; }
+  if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ const h = prompt('Short explanation for “' + w.uk + '” (' + w.en[0] + '):', w.hint || ''); if (h !== null){ w.hint = h.trim(); w.hintAuto = false; save(); renderList(); } } return; }
   const del = e.target.dataset.del, rs = e.target.dataset.reset;
-  if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Видалити «${w.uk}»?`)){ db.words = db.words.filter(x=>x.id!==del); save(); renderList(); } }
-  if (rs){ const w = db.words.find(x=>x.id===rs); if (w){ Object.assign(w,{box:0,seen:false,due:0,weak:false}); save(); renderList(); toast('Слово знову серед нових'); } }
+  if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Delete “${w.uk}”?`)){ db.words = db.words.filter(x=>x.id!==del); save(); renderList(); } }
+  if (rs){ const w = db.words.find(x=>x.id===rs); if (w){ Object.assign(w,{box:0,seen:false,due:0,weak:false}); save(); renderList(); toast('The word is new again'); } }
 };
 $('search').oninput = renderList;
 $('autoHints').value = db.settings.autoHints === false ? '0' : '1';
@@ -1545,7 +1626,7 @@ $('addForm').onsubmit = e => {
   const r = addWord($('addUk').value, $('addEn').value, $('addHint').value);
   if (!r) return;
   save(); $('addUk').value = ''; $('addEn').value = ''; $('addHint').value = ''; $('addUk').focus();
-  toast(r === 'merged' ? 'Слово вже було — оновив його' : 'Додано'); renderList();
+  toast(r === 'merged' ? 'Word already existed, updated it' : 'Added'); renderList();
 };
 $('bulkBtn').onclick = () => {
   let n = 0, bad = 0;
@@ -1557,59 +1638,83 @@ $('bulkBtn').onclick = () => {
   });
   save(); renderList();
   if (n) $('bulk').value = '';
-  toast(`Додано: ${n}` + (bad ? `. Пропущено рядків: ${bad}` : ''));
+  toast(`Added: ${n}` + (bad ? `. Skipped lines: ${bad}` : ''));
 };
 let hintsRunning = false;
 $('hintsBtn').onclick = async () => {
   const out = $('hintsOut');
-  if (!db.settings.oaKey){ out.textContent = 'Спершу вставте ключ OpenAI на головному екрані.'; return; }
+  if (!db.settings.oaKey){ out.textContent = 'Add your OpenAI key in Settings first.'; return; }
   if (hintsRunning){ hintsRunning = false; return; }
   let list;
   if ($('hintsScope').value === 'redo'){
     list = db.words.filter(w => w.hintAuto);
-    if (!list.length){ out.textContent = 'Автоматичних пояснень немає.'; return; }
-    if (!confirm('Переписати ' + list.length + ' автоматичних пояснень? Ваші власні (змінені вручну) залишаться.')) return;
+    if (!list.length){ out.textContent = 'There are no automatic explanations.'; return; }
+    if (!confirm('Rewrite ' + list.length + ' automatic explanations? Your own (edited) ones will stay.')) return;
     list.forEach(w => { w.hint = ''; w.hintAuto = false; }); save();
   } else list = ($('hintsScope').value === 'all' ? db.words : activeWords()).filter(w => !w.hint);
-  if (!list.length){ out.textContent = 'У всіх слів уже є пояснення.'; return; }
-  hintsRunning = true; $('hintsBtn').textContent = 'Зупинити';
+  if (!list.length){ out.textContent = 'All words already have explanations.'; return; }
+  hintsRunning = true; $('hintsBtn').textContent = 'Stop';
   let lock = null; try { lock = await navigator.wakeLock.request('screen'); } catch(e){}
   const B = 20;
   let done = 0, tries = 0, skipped = 0, streak = 0, lastErr = '';
   for (let i = 0; i < list.length && hintsRunning; ){
-    out.textContent = `Пишу пояснення… ${done} з ${list.length}. Не закривайте додаток.`;
+    out.textContent = `Writing explanations… ${done} of ${list.length}. Keep the app open.`;
     try { done += await writeHints(list.slice(i, i + B)); i += B; tries = 0; streak = 0; }
     catch(e){
       lastErr = e.message || String(e);
-      if (/ключ|429/.test(lastErr)) { skipped = -1; break; }
+      if (/key|429/.test(lastErr)) { skipped = -1; break; }
       if (++tries >= 3){ skipped += Math.min(B, list.length - i); i += B; tries = 0; if (++streak >= 4) { skipped = -1; break; } }
-      out.textContent = `Повторюю… (${lastErr})`;
+      out.textContent = `Retrying… (${lastErr})`;
       await wait(3000);
     }
   }
   try { lock && lock.release(); } catch(e){}
-  if (skipped < 0) out.textContent = `Зупинено: ${lastErr}. Написано ${done}. Натисніть ще раз, щоб продовжити.`;
-  else if (!hintsRunning) out.textContent = `Зупинено. Написано ${done}. Натисніть ще раз, щоб продовжити.`;
-  else out.textContent = `Готово: написано ${done} пояснень.` + (skipped ? ` ${skipped} слів пропущено — натисніть ще раз, щоб дописати.` : '');
-  hintsRunning = false; $('hintsBtn').textContent = 'Написати пояснення';
+  if (skipped < 0) out.textContent = `Stopped: ${lastErr}. Written: ${done}. Tap again to continue.`;
+  else if (!hintsRunning) out.textContent = `Stopped. Written: ${done}. Tap again to continue.`;
+  else out.textContent = `Done: ${done} explanations written.` + (skipped ? ` ${skipped} skipped — tap again to finish.` : '');
+  hintsRunning = false; $('hintsBtn').textContent = 'Write explanations';
   renderList();
 };
 $('autoHints').onchange = e => { db.settings.autoHints = e.target.value === '1'; save(); };
 $('exportBtn').onclick = async () => {
   const text = JSON.stringify({ ...db, settings: { ...db.settings, oaKey: undefined } });
-  try { await navigator.clipboard.writeText(text); toast('Копію скопійовано. Збережіть її в нотатках'); }
-  catch(e){ prompt('Скопіюйте цей текст і збережіть:', text); }
+  try { await navigator.clipboard.writeText(text); toast('Backup copied. Save it in your notes'); }
+  catch(e){ prompt('Copy and save this text:', text); }
 };
 $('importBtn').onclick = () => {
-  const t = prompt('Вставте збережену копію:');
+  const t = prompt('Paste your saved backup:');
   if (!t) return;
   try { const d = JSON.parse(t); if (!Array.isArray(d.words)) throw 0;
-    if (confirm(`Замінити поточні слова (${db.words.length}) на копію (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}), oaKey: db.settings.oaKey } }; save(); renderList(); toast('Відновлено'); } }
-  catch(e){ toast('Це не схоже на копію з Rehearsal'); }
+    if (confirm(`Replace current words (${db.words.length}) with the backup (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}), oaKey: db.settings.oaKey } }; save(); renderList(); toast('Restored'); } }
+  catch(e){ toast('This does not look like a Rehearsal backup'); }
 };
+
+/* ---------- First launch: choose your language ---------- */
+function showLangPicker(){
+  const guess = (navigator.languages || [navigator.language || '']).map(l => String(l).slice(0, 2).toLowerCase()).find(l => NATIVES[l] && NATIVES[l].ready);
+  const order = Object.keys(NATIVES).filter(k => NATIVES[k].ready).sort((a, b) => (b === guess) - (a === guess));
+  $('langList').innerHTML = order.map(k => `<button class="lang-btn${k === guess ? ' suggested' : ''}" data-lang="${k}"><span>${esc(NATIVES[k].name)}</span><small>${esc(NATIVES[k].en)}</small></button>`).join('');
+  $('langList').querySelectorAll('.lang-btn').forEach(b => b.onclick = async () => {
+    const lang = b.dataset.lang;
+    $('langList').querySelectorAll('.lang-btn').forEach(x => x.disabled = true);
+    b.querySelector('small').textContent = 'Loading…';
+    if (lang === 'uk'){
+      db.settings.packs = { mine: false, b1: true, b2: false };   // a new learner starts at Level 1
+      save();
+      try { localStorage.setItem(KEY_NATIVE, 'uk'); localStorage.removeItem('rehearsal:pending'); } catch(e){}
+      $('langPick').hidden = true; renderStart();
+    } else {
+      await switchNative(lang);
+      $('langList').querySelectorAll('.lang-btn').forEach(x => x.disabled = false);
+      b.querySelector('small').textContent = NATIVES[lang].en;
+    }
+  });
+  $('langPick').hidden = false;
+}
 
 /* ---------- Init ---------- */
 renderStart();
+if (FIRST_RUN) showLangPicker();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
