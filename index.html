@@ -60,6 +60,20 @@ details.fold>summary b{font-size:1.05rem}
 details.fold>summary small{opacity:.6;font-size:.82rem}
 details.fold>summary::after{content:'›';font-size:1.5rem;opacity:.6;transition:transform .2s}
 details.fold[open]>summary::after{transform:rotate(90deg)}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
+.lvl:not(.on){opacity:.55}
+.lvl.on{border-color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset,0 6px 18px -10px rgba(29,233,182,.7)}
+.lvl-steps{display:flex;align-items:flex-end;gap:3px;height:18px}
+.lvl-steps i{width:5px;border-radius:2px;background:currentColor;opacity:.25}
+.lvl-steps i:nth-child(1){height:7px}.lvl-steps i:nth-child(2){height:12px}.lvl-steps i:nth-child(3){height:18px}
+.lvl-steps i.f{opacity:1;background:linear-gradient(180deg,#9ff5e2,#1de9b6)}
+.lvl b{font-size:.95rem;line-height:1.1}
+.lvl small{font-size:.72rem;opacity:.65;line-height:1.2}
+.lvl-bar{margin-top:auto;width:100%;height:4px;border-radius:4px;background:rgba(127,127,127,.25);overflow:hidden}
+.lvl-bar i{display:block;height:100%;background:linear-gradient(90deg,#9ff5e2,#1de9b6)}
+.lvl-check{position:absolute;top:9px;right:10px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;border:1.5px solid currentColor;opacity:.35}
+.lvl.on .lvl-check{background:#1de9b6;border-color:#1de9b6;color:#021615;opacity:1}
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
 .lang-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:inherit;font:600 .85rem var(--body);cursor:pointer;flex:none}
 .lang-chip svg{opacity:.85}
@@ -166,7 +180,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v39</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v40</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -178,6 +192,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 
   <!-- PRACTICE: start -->
   <section id="view-start">
+    <div class="levels" id="levels" role="group" aria-label="Levels"></div>
     <div class="panel">
       <div class="stats" id="stats"></div>
     </div>
@@ -1498,7 +1513,29 @@ $('endBtn').onclick = () => { if (!session) return; if (Object.keys(session.grad
 $('againBtn').onclick = () => { hush(); renderStart(); show('start'); };
 
 /* ---------- Start screen ---------- */
+const LEVEL_SHORT = { b1: ['Level 1', 'Intermediate'], b2: ['Level 2', 'Upper-int.'], mine: ['Level 3', 'Advanced'] };
+function renderLevels(){
+  $('levels').innerHTML = PACK_ORDER.map((p, i) => {
+    const ws = db.words.filter(w => (w.pack || 'mine') === p);
+    const known = ws.filter(w => status(w) === 'known').length;
+    const pct = ws.length ? Math.round(known / ws.length * 100) : 0;
+    const on = !!db.settings.packs[p];
+    return `<button class="lvl${on ? ' on' : ''}" data-pack="${p}" aria-pressed="${on}">
+      <span class="lvl-check">${on ? '✓' : ''}</span>
+      <span class="lvl-steps">${[0,1,2].map(k => `<i class="${k <= i ? 'f' : ''}"></i>`).join('')}</span>
+      <b>${LEVEL_SHORT[p][0]}</b><small>${LEVEL_SHORT[p][1]}</small>
+      <span class="lvl-bar" title="${pct}% learned"><i style="width:${pct}%"></i></span>
+      <small>${known} / ${ws.length}</small>
+    </button>`;
+  }).join('');
+  $('levels').querySelectorAll('.lvl').forEach(b => b.onclick = () => {
+    const p = b.dataset.pack, next = { ...db.settings.packs, [p]: !db.settings.packs[p] };
+    if (!Object.values(next).some(Boolean)){ toast('Keep at least one level on'); return; }
+    db.settings.packs = next; save(); renderStart();
+  });
+}
 function renderStart(){
+  renderLevels();
   const c = { all: activeWords().length, weak:0, known:0 };
   activeWords().forEach(w => { const s = status(w); if (s==='weak') c.weak++; if (s==='known') c.known++; });
   const due = dueWords().length, fresh = Math.min(newWords().length, db.settings.newPer);
