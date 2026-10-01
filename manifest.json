@@ -1,13 +1,13 @@
 {
-  "name": "English — слова голосом",
-  "short_name": "English",
+  "name": "Rehearsal: Learn English Words",
+  "short_name": "Rehearsal",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#021615",
   "theme_color": "#021615",
-  "lang": "uk",
+  "lang": "en",
   "icons": [
     {
       "src": "icon-192.png",
@@ -33,5 +33,10 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "description": "Learn English words from your own language: listen, choose from 3 similar options, and review at the right time.",
+  "categories": [
+    "education"
+  ],
+  "id": "./"
 }
