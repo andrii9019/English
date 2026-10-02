@@ -63,6 +63,9 @@ details.fold>summary b{font-size:1.05rem}
 details.fold>summary small{opacity:.6;font-size:.82rem}
 details.fold>summary::after{content:'›';font-size:1.5rem;opacity:.6;transition:transform .2s}
 details.fold[open]>summary::after{transform:rotate(90deg)}
+.dir-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:0 0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.dir-switch button{font:600 .95rem var(--body);color:inherit;background:none;border:0;border-radius:999px;padding:10px 6px;cursor:pointer;opacity:.6}
+.dir-switch button.on{opacity:1;background:var(--grad);color:var(--on-primary);box-shadow:0 4px 14px -6px var(--glow)}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
 .lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
 .lvl:not(.on){opacity:.55}
@@ -77,6 +80,7 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .lvl-bar i{display:block;height:100%;background:linear-gradient(90deg,#9ff5e2,#1de9b6)}
 .lvl-check{position:absolute;top:9px;right:10px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;border:1.5px solid currentColor;opacity:.35}
 .lvl.on .lvl-check{background:#1de9b6;border-color:#1de9b6;color:#021615;opacity:1}
+.stat-plain{padding:7px 2px}
 .stat-go{font:inherit;color:inherit;background:rgba(29,233,182,.07);border:1px solid rgba(29,233,182,.35);border-radius:14px;padding:6px 2px 7px;cursor:pointer}
 .stat-go em{display:block;font-style:normal;font-size:.68rem;font-weight:600;color:#34e0a8;margin-top:2px}
 .stat-go:disabled{background:none;border-color:transparent;cursor:default}
@@ -191,7 +195,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v43</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v44</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -203,6 +207,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 
   <!-- PRACTICE: start -->
   <section id="view-start">
+    <div class="dir-switch" id="dirSwitch" role="group" aria-label="Direction"></div>
     <div class="levels" id="levels" role="group" aria-label="Levels"></div>
     <div class="panel">
       <div class="stats" id="stats"></div>
@@ -450,6 +455,19 @@ const PACK_SHORT = { b1: 'L1', b2: 'L2', mine: 'L3' };
 const PACK_ORDER = ['b1', 'b2', 'mine'];
 
 function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+/* ---------- Direction: native → English (fwd) or English → native (rev) ---------- */
+const PROG = ['box', 'seen', 'due', 'weak', 'right', 'wrong'];
+const freshProg = () => ({ box: 0, seen: false, due: 0, weak: false, right: 0, wrong: 0 });
+const isRev = () => db.settings.dir === 'rev';
+function setDirection(dir){
+  if ((db.settings.dir || 'fwd') === dir) return;
+  db.words.forEach(w => {
+    const other = w.alt || freshProg(), mine = {};
+    PROG.forEach(k => { mine[k] = w[k]; w[k] = other[k]; });
+    w.alt = mine;
+  });
+  db.settings.dir = dir; save();
+}
 function makeWord(uk, en, hint = ''){
   return { id: uid(), uk: uk.trim(), en: en.split(',').map(s=>s.trim()).filter(Boolean), hint: hint.trim(),
            box: 0, seen: false, due: 0, weak: false, right: 0, wrong: 0, added: Date.now() };
@@ -995,6 +1013,9 @@ async function startSession(focus){
   if (focus === 'weak'){
     queue = activeWords().filter(w => status(w) === 'weak').map(w => ({ id: w.id, phase: 'review' }));
     if (!queue.length){ toast('No weak words right now 👍'); return; }
+  } else if (focus === 'known'){
+    queue = activeWords().filter(w => status(w) === 'known').sort(() => Math.random() - 0.5).slice(0, 20).map(w => ({ id: w.id, phase: 'review' }));
+    if (!queue.length){ toast('No learned words yet'); return; }
   } else if (focus === 'due'){
     queue = dueWords().map(w => ({ id: w.id, phase: 'review' }));
     if (!queue.length){ toast('Nothing to review right now 👍'); return; }
@@ -1075,6 +1096,7 @@ function warmPhrases(){
   [...PRAISE, ...WRONG, ...DUNNO, ...REPEAT_OK, ...REPEAT_LATER, ...Object.values(STREAK)].forEach(t => warm(t, EN()));
 }
 async function sayPick(w, step){
+  if (isRev()) return speak(w.en[0], EN());
   if (oaOn('oaVoice') && db.settings.hints && w.hint) return speak(wordLine(w), NL());
   await speak(speakable(w.uk), NL());
   if (db.settings.hints && w.hint && alive(step) && !session.locked){ await wait(200); if (alive(step) && !session.locked) await speak(speakable(w.hint), NL()); }
@@ -1098,8 +1120,8 @@ async function presentItem(){
   $('bar').style.width = (session.i / session.queue.length * 100) + '%';
   $('phaseLabel').textContent = PHASE[it.phase];
   $('counter').textContent = (session.i + 1) + ' / ' + session.queue.length;
-  $('word').textContent = w.uk;
-  $('hint').textContent = [w.hint, needsLetter(w) ? 'EN: ' + letterText(w) : ''].filter(Boolean).join(' · ');
+  $('word').textContent = isRev() ? w.en.join(', ') : w.uk;
+  $('hint').textContent = isRev() ? '' : [w.hint, needsLetter(w) ? 'EN: ' + letterText(w) : ''].filter(Boolean).join(' · ');
   $('feedback').className = 'feedback'; $('feedback').innerHTML = ''; $('choices').innerHTML = '';
   $('mic').hidden = pickMode(); $('typeBtn').hidden = pickMode(); $('cmdHint').hidden = pickMode();
   $('dunnoBtn').hidden = false; $('typedInput').value = '';
@@ -1241,27 +1263,57 @@ function hardDistractors(w, n = 2){
   }
   return out;
 }
+function revDistractors(w, n = 2){
+  const nat = w.uk.toLowerCase(), mean = meanings(w), pos = posUk(w), words = nat.split(' ').length;
+  const enL = w.en.map(t => t.toLowerCase());
+  const scored = [];
+  for (const x of db.words){
+    if (x.id === w.id) continue;
+    if (x.en.some(v => enL.includes(v.toLowerCase()))) continue;          // another correct answer
+    if (meanings(x).some(m => mean.includes(m))) continue;
+    const u = x.uk.toLowerCase();
+    let sc = (1 - lev(nat, u) / Math.max(nat.length, u.length)) * 6;
+    if (nat.slice(0, 3) === u.slice(0, 3)) sc += 2;
+    if (nat.slice(-3) === u.slice(-3)) sc += 1.5;
+    if (posUk(x) === pos) sc += 2.5;
+    const xw = u.split(' ').length;
+    if (xw === words) sc += 1.5; else if ((xw > 1) !== (words > 1)) sc -= 4;
+    if ((x.pack || 'mine') === (w.pack || 'mine')){ sc += 1; if (x.added && w.added && Math.abs(x.added - w.added) < 40) sc += 2; }
+    sc += Math.random() * 1.2;
+    scored.push([sc, x.uk]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  const top = scored.slice(0, 5).map(t => t[1]), out = [];
+  while (out.length < n && top.length){
+    const u = top.splice(Math.floor(Math.random() * Math.min(3, top.length)), 1)[0];
+    if (!out.includes(u) && u !== w.uk) out.push(u);
+  }
+  return out;
+}
 function pickRound(step){
   const { w } = current();
-  const opts = [w.en[0], ...hardDistractors(w)].sort(() => Math.random() - 0.5);
+  const rev = isRev(), optLang = rev ? NL() : EN();
+  const opts = (rev ? [w.uk, ...revDistractors(w)] : [w.en[0], ...hardDistractors(w)]).sort(() => Math.random() - 0.5);
+  const isRight = o => rev ? o === w.uk : w.en.includes(o);
   const SPK = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" fill-opacity=".18"/><path d="M15.5 9a4 4 0 0 1 0 6M18.2 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
-  $('choices').innerHTML = opts.map((o, i) => `<div class="choice-row"><button class="btn choice" data-i="${i}"><b>${i + 1}</b> ${esc(o)}</button><button class="say-btn" data-say="${i}" aria-label="Pronounce ${esc(o)}">${SPK}</button></div>`).join('');
-  opts.forEach(o => warm(o, EN()));
+  $('choices').innerHTML = opts.map((o, i) => `<div class="choice-row"><button class="btn choice" data-i="${i}" data-right="${isRight(o) ? 1 : 0}"><b>${i + 1}</b> ${esc(o)}</button><button class="say-btn" data-say="${i}" aria-label="Pronounce ${esc(o)}">${SPK}</button></div>`).join('');
+  opts.forEach(o => warm(rev ? speakable(o) : o, optLang));
   $('choices').querySelectorAll('.say-btn').forEach(b => b.onclick = e => {
     e.stopPropagation();
     hush(); b.classList.add('playing');
-    Promise.resolve(speak(opts[+b.dataset.say], EN())).finally(() => b.classList.remove('playing'));
+    const o = opts[+b.dataset.say];
+    Promise.resolve(speak(rev ? speakable(o) : o, optLang)).finally(() => b.classList.remove('playing'));
   });
   setStatus('Choose the translation');
   $('choices').querySelectorAll('.choice').forEach(b => b.onclick = () => {
     if (!alive(step) || session.locked) return;
-    const chosen = opts[+b.dataset.i], ok = w.en.includes(chosen);
+    const chosen = opts[+b.dataset.i], ok = isRight(chosen);
     $('choices').querySelectorAll('.choice').forEach(c => {
       c.disabled = true;
-      if (w.en.includes(opts[+c.dataset.i])) c.classList.add('right');
+      if (isRight(opts[+c.dataset.i])) c.classList.add('right');
       else if (c === b) c.classList.add('wrong');
     });
-    handleAnswer(ok ? [chosen] : ['__wrong__'], chosen);
+    handleAnswer(ok ? [w.en[0]] : ['__wrong__'], chosen);
   });
 }
 function distractors(w, n = 2){
@@ -1390,9 +1442,9 @@ async function handleAnswer(heard, shown){
 
   if (pickMode()){
     setStatus('');
-    $('choices').querySelectorAll('.choice').forEach(c => { c.disabled = true; if (w.en.includes(c.textContent.replace(/^\d+\s*/, '').trim())) c.classList.add('right'); });
+    $('choices').querySelectorAll('.choice').forEach(c => { c.disabled = true; if (c.dataset.right === '1') c.classList.add('right'); });
     session.streak = ok ? (session.streak || 0) + 1 : 0;
-    if (!ok){ await speak(w.en[0], EN()); if (alive(step)) await wait(500); }
+    if (!ok){ await (isRev() ? speak(speakable(w.uk), NL()) : speak(w.en[0], EN())); if (alive(step)) await wait(500); }
     else await wait(450);
     if (alive(step)) advance();
     return;
@@ -1542,7 +1594,13 @@ $('againBtn').onclick = () => { hush(); renderStart(); show('start'); };
 
 /* ---------- Start screen ---------- */
 const LEVEL_SHORT = { b1: ['Level 1', 'Intermediate'], b2: ['Level 2', 'Upper-int.'], mine: ['Level 3', 'Advanced'] };
+function renderDir(){
+  const n = NATIVE().short;
+  $('dirSwitch').innerHTML = `<button data-dir="fwd" class="${isRev() ? '' : 'on'}" aria-pressed="${!isRev()}">${esc(n)} → EN</button><button data-dir="rev" class="${isRev() ? 'on' : ''}" aria-pressed="${isRev()}">EN → ${esc(n)}</button>`;
+  $('dirSwitch').querySelectorAll('button').forEach(b => b.onclick = () => { setDirection(b.dataset.dir); renderStart(); });
+}
 function renderLevels(){
+  renderDir();
   $('levels').innerHTML = PACK_ORDER.map((p, i) => {
     const ws = db.words.filter(w => (w.pack || 'mine') === p);
     const known = ws.filter(w => status(w) === 'known').length;
@@ -1568,8 +1626,8 @@ function renderStart(){
   activeWords().forEach(w => { const s = status(w); if (s==='weak') c.weak++; if (s==='known') c.known++; });
   const due = dueWords().length, fresh = Math.min(newWords().length, db.settings.newPer);
   $('stats').innerHTML = `
-    <div class="stat"><b>${c.all}</b><span>total</span></div>
-    <div class="stat"><b>${c.known}</b><span>learned</span></div>
+    <div class="stat stat-plain"><b>${c.all}</b><span>total</span></div>
+    <button class="stat stat-go" data-focus="known" ${c.known ? '' : 'disabled'}><b>${c.known}</b><span>learned</span><em>practise ›</em></button>
     <button class="stat weak stat-go" data-focus="weak" ${c.weak ? '' : 'disabled'}><b>${c.weak}</b><span>weak</span><em>practise ›</em></button>
     <button class="stat stat-go" data-focus="due" ${due ? '' : 'disabled'}><b>${due}</b><span>to review</span><em>practise ›</em></button>`;
   $('stats').querySelectorAll('.stat-go').forEach(b => b.onclick = () => startSession(b.dataset.focus));
