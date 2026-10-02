@@ -77,6 +77,10 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .lvl-bar i{display:block;height:100%;background:linear-gradient(90deg,#9ff5e2,#1de9b6)}
 .lvl-check{position:absolute;top:9px;right:10px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;border:1.5px solid currentColor;opacity:.35}
 .lvl.on .lvl-check{background:#1de9b6;border-color:#1de9b6;color:#021615;opacity:1}
+.stat-go{font:inherit;color:inherit;background:rgba(29,233,182,.07);border:1px solid rgba(29,233,182,.35);border-radius:14px;padding:6px 2px 7px;cursor:pointer}
+.stat-go em{display:block;font-style:normal;font-size:.68rem;font-weight:600;color:#34e0a8;margin-top:2px}
+.stat-go:disabled{background:none;border-color:transparent;cursor:default}
+.stat-go:disabled em{visibility:hidden}
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
 .lang-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:inherit;font:600 .85rem var(--body);cursor:pointer;flex:none}
 .lang-chip svg{opacity:.85}
@@ -187,7 +191,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v42</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v43</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -986,11 +990,21 @@ function greeting(){
   return h < 5 ? 'Good night!' : h < 12 ? 'Good morning!' : h < 18 ? 'Good afternoon!' : 'Good evening!';
 }
 
-async function startSession(){
-  const fresh = newWords().slice(0, db.settings.newPer);
-  const due = dueWords();
-  const queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
-  if (!queue.length){ toast('No words to practise. Add some new words.'); return; }
+async function startSession(focus){
+  let queue;
+  if (focus === 'weak'){
+    queue = activeWords().filter(w => status(w) === 'weak').map(w => ({ id: w.id, phase: 'review' }));
+    if (!queue.length){ toast('No weak words right now 👍'); return; }
+  } else if (focus === 'due'){
+    queue = dueWords().map(w => ({ id: w.id, phase: 'review' }));
+    if (!queue.length){ toast('Nothing to review right now 👍'); return; }
+  } else {
+    const fresh = newWords().slice(0, db.settings.newPer);
+    const due = dueWords();
+    queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
+    if (!queue.length){ toast('No words to practise. Add some new words.'); return; }
+  }
+  const fresh = queue.filter(q => q.phase === 'new');
   session = { queue, i: 0, graded: {}, mistakes: [], right: 0, step: 0, locked: false, paused: false };
   show('session'); keepAwake();
   queue.slice(0, 4).forEach(q => warmWord(db.words.find(x => x.id === q.id))); warmPhrases();
@@ -1448,7 +1462,7 @@ function finishSession(){
   if (!pickMode()) speak(total ? `${mood} ${s.right} of ${total} correct.` + (s.mistakes.length ? ' We will review the hard ones next time. See you!' : ' No mistakes! See you!') : 'See you!', EN());
 }
 
-$('startBtn').onclick = startSession;
+$('startBtn').onclick = () => startSession();
 $('soundTest').onclick = async () => {
   const out = $('micTestOut');
   loadVoices();
@@ -1556,8 +1570,9 @@ function renderStart(){
   $('stats').innerHTML = `
     <div class="stat"><b>${c.all}</b><span>total</span></div>
     <div class="stat"><b>${c.known}</b><span>learned</span></div>
-    <div class="stat weak"><b>${c.weak}</b><span>weak</span></div>
-    <div class="stat"><b>${due}</b><span>to review</span></div>`;
+    <button class="stat weak stat-go" data-focus="weak" ${c.weak ? '' : 'disabled'}><b>${c.weak}</b><span>weak</span><em>practise ›</em></button>
+    <button class="stat stat-go" data-focus="due" ${due ? '' : 'disabled'}><b>${due}</b><span>to review</span><em>practise ›</em></button>`;
+  $('stats').querySelectorAll('.stat-go').forEach(b => b.onclick = () => startSession(b.dataset.focus));
   $('plan').textContent = (fresh || due) ? `Today: ${fresh} new words and ${due} to review.` : 'All done for today. Add new words or come back tomorrow.';
   $('startBtn').disabled = !(fresh || due);
   const notes = [];
