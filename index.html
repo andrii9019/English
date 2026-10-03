@@ -66,6 +66,10 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .dir-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:0 0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
 .dir-switch button{font:600 .95rem var(--body);color:inherit;background:none;border:0;border-radius:999px;padding:10px 6px;cursor:pointer;opacity:.6}
 .dir-switch button.on{opacity:1;background:var(--grad);color:var(--on-primary);box-shadow:0 4px 14px -6px var(--glow)}
+.start-row{display:flex;gap:10px;align-items:stretch}
+.start-row #startBtn{flex:1}
+.shuffle-btn{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:74px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:inherit;font:600 .68rem var(--body);cursor:pointer;opacity:.6;transition:all .2s}
+.shuffle-btn.on{opacity:1;color:#34e0a8;border-color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
 .lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
 .lvl:not(.on){opacity:.55}
@@ -195,7 +199,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v44</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v45</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -215,7 +219,10 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
     <div class="panel">
       <p id="plan" style="margin-top:0"></p>
       <button class="btn big" id="installBtn" hidden style="margin-bottom:10px">Install app</button>
-      <button class="btn primary big" id="startBtn">Start</button>
+      <div class="start-row">
+        <button class="btn primary big" id="startBtn">Start</button>
+        <button class="shuffle-btn" id="shuffleBtn" aria-pressed="false" aria-label="Shuffle words" title="Shuffle words"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg><span>Shuffle</span></button>
+      </div>
     </div>
   </section>
 
@@ -1008,6 +1015,7 @@ function greeting(){
   return h < 5 ? 'Good night!' : h < 12 ? 'Good morning!' : h < 18 ? 'Good afternoon!' : 'Good evening!';
 }
 
+function shuffled(a){ const b = a.slice(); for (let i = b.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
 async function startSession(focus){
   let queue;
   if (focus === 'weak'){
@@ -1020,11 +1028,14 @@ async function startSession(focus){
     queue = dueWords().map(w => ({ id: w.id, phase: 'review' }));
     if (!queue.length){ toast('Nothing to review right now 👍'); return; }
   } else {
-    const fresh = newWords().slice(0, db.settings.newPer);
+    const mix = !!db.settings.shuffle;
+    const fresh = (mix ? shuffled(newWords()) : newWords()).slice(0, db.settings.newPer);
     const due = dueWords();
     queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
+    if (mix) queue = shuffled(queue);
     if (!queue.length){ toast('No words to practise. Add some new words.'); return; }
   }
+  if (focus && db.settings.shuffle) queue = shuffled(queue);
   const fresh = queue.filter(q => q.phase === 'new');
   session = { queue, i: 0, graded: {}, mistakes: [], right: 0, step: 0, locked: false, paused: false };
   show('session'); keepAwake();
@@ -1594,7 +1605,17 @@ $('againBtn').onclick = () => { hush(); renderStart(); show('start'); };
 
 /* ---------- Start screen ---------- */
 const LEVEL_SHORT = { b1: ['Level 1', 'Intermediate'], b2: ['Level 2', 'Upper-int.'], mine: ['Level 3', 'Advanced'] };
+function renderShuffle(){
+  const on = !!db.settings.shuffle;
+  $('shuffleBtn').classList.toggle('on', on); $('shuffleBtn').setAttribute('aria-pressed', on);
+  $('shuffleBtn').querySelector('span').textContent = on ? 'Shuffled' : 'Shuffle';
+}
+$('shuffleBtn').onclick = () => {
+  db.settings.shuffle = !db.settings.shuffle; save(); renderShuffle();
+  toast(db.settings.shuffle ? 'Words will come in random order' : 'Words will come in order');
+};
 function renderDir(){
+  renderShuffle();
   const n = NATIVE().short;
   $('dirSwitch').innerHTML = `<button data-dir="fwd" class="${isRev() ? '' : 'on'}" aria-pressed="${!isRev()}">${esc(n)} → EN</button><button data-dir="rev" class="${isRev() ? 'on' : ''}" aria-pressed="${isRev()}">EN → ${esc(n)}</button>`;
   $('dirSwitch').querySelectorAll('button').forEach(b => b.onclick = () => { setDirection(b.dataset.dir); renderStart(); });
