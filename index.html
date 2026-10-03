@@ -199,7 +199,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v45</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v46</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1015,6 +1015,13 @@ function greeting(){
   return h < 5 ? 'Good night!' : h < 12 ? 'Good morning!' : h < 18 ? 'Good afternoon!' : 'Good evening!';
 }
 
+// mix levels in turn — L1, L2, L3, L1, L2, L3… — keeping each level's own order, no repeats
+function interleave(words){
+  const groups = PACK_ORDER.map(p => words.filter(w => (w.pack || 'mine') === p)).filter(g => g.length);
+  const out = [];
+  for (let i = 0; groups.some(g => i < g.length); i++) groups.forEach(g => { if (i < g.length) out.push(g[i]); });
+  return out;
+}
 function shuffled(a){ const b = a.slice(); for (let i = b.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
 async function startSession(focus){
   let queue;
@@ -1029,13 +1036,12 @@ async function startSession(focus){
     if (!queue.length){ toast('Nothing to review right now 👍'); return; }
   } else {
     const mix = !!db.settings.shuffle;
-    const fresh = (mix ? shuffled(newWords()) : newWords()).slice(0, db.settings.newPer);
+    const fresh = (mix ? interleave(newWords()) : newWords()).slice(0, db.settings.newPer);
     const due = dueWords();
-    queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...due.map(w=>({id:w.id, phase:'review'}))];
-    if (mix) queue = shuffled(queue);
+    queue = [...fresh.map(w=>({id:w.id, phase:'new'})), ...(mix ? interleave(due) : due).map(w=>({id:w.id, phase:'review'}))];
     if (!queue.length){ toast('No words to practise. Add some new words.'); return; }
   }
-  if (focus && db.settings.shuffle) queue = shuffled(queue);
+  if (focus && db.settings.shuffle) queue = interleave(queue.map(q => db.words.find(w => w.id === q.id))).map(w => ({ id: w.id, phase: 'review' }));
   const fresh = queue.filter(q => q.phase === 'new');
   session = { queue, i: 0, graded: {}, mistakes: [], right: 0, step: 0, locked: false, paused: false };
   show('session'); keepAwake();
@@ -1612,7 +1618,7 @@ function renderShuffle(){
 }
 $('shuffleBtn').onclick = () => {
   db.settings.shuffle = !db.settings.shuffle; save(); renderShuffle();
-  toast(db.settings.shuffle ? 'Words will come in random order' : 'Words will come in order');
+  toast(db.settings.shuffle ? 'Levels mixed: L1, L2, L3, L1…' : 'Levels in order: L1 first, then L2, then L3');
 };
 function renderDir(){
   renderShuffle();
