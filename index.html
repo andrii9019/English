@@ -217,7 +217,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v47</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v48</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1174,7 +1174,7 @@ async function presentItem(){
   setStatus('');
   const lead = it.phase === 'retry' && session.firstRetry !== false ? 'Mistakes again. ' : '';
   if (it.phase === 'retry') session.firstRetry = false;
-  if (pickMode()){ pickRound(step); sayPick(w, step); for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); } return; }
+  if (pickMode()){ pickRound(step); sayPick(w, step); prefetchExplain(); for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); } return; }
   if (lead) await speak(lead, EN());
   if (!alive(step)) return;
   await sayWord(w);
@@ -1385,6 +1385,27 @@ function renderExplain(w){
   if (dict && !ai && !db.settings.oaKey) html += '<p class="ex-note">Tip: with an OpenAI key (Settings → Natural voice) you also get an explanation in your language.</p>';
   $('exBody').innerHTML = html;
 }
+const exInflight = new Map();
+function ensureExplain(w){
+  w.ex = w.ex || {};
+  const needDict = w.ex.dict === undefined, needAi = !!db.settings.oaKey && !(w.ex.ai && w.ex.ai[NATIVE_CODE]);
+  if (!needDict && !needAi) return Promise.resolve();
+  if (exInflight.has(w.id)) return exInflight.get(w.id);
+  const jobs = [];
+  if (needDict) jobs.push(dictLookup(w).then(d => { if (d !== undefined) w.ex.dict = d; }));
+  if (needAi) jobs.push(aiExplain(w).then(a => { w.ex.ai = { ...(w.ex.ai || {}), [NATIVE_CODE]: a }; }).catch(e => console.warn(e)));
+  const job = Promise.all(jobs).then(() => { save(); }).finally(() => exInflight.delete(w.id));
+  exInflight.set(w.id, job);
+  return job;
+}
+// get explanations ready in the background for the current word and the next two
+function prefetchExplain(){
+  if (!session || !navigator.onLine) return;
+  for (let k = 0; k < 3; k++){
+    const q = session.queue[session.i + k]; if (!q) break;
+    const w = db.words.find(x => x.id === q.id); if (w) ensureExplain(w);
+  }
+}
 async function openExplain(w){
   hush();
   $('exWord').textContent = w.en.join(', ');
@@ -1393,15 +1414,11 @@ async function openExplain(w){
   $('exSay').onclick = () => { hush(); speak(w.en[0], EN()); };
   $('explain').hidden = false;
   w.ex = w.ex || {};
-  const needDict = w.ex.dict === undefined, needAi = db.settings.oaKey && !(w.ex.ai && w.ex.ai[NATIVE_CODE]);
-  if (!needDict && !needAi){ renderExplain(w); return; }
+  const ready = w.ex.dict !== undefined && (!db.settings.oaKey || (w.ex.ai && w.ex.ai[NATIVE_CODE]));
   renderExplain(w);
+  if (ready) return;
   $('exBody').insertAdjacentHTML('beforeend', '<p class="ex-note" id="exLoading">Loading explanation…</p>');
-  const jobs = [];
-  if (needDict) jobs.push(dictLookup(w).then(d => { if (d !== undefined) w.ex.dict = d; }));
-  if (needAi) jobs.push(aiExplain(w).then(a => { w.ex.ai = { ...(w.ex.ai || {}), [NATIVE_CODE]: a }; }).catch(e => console.warn(e)));
-  await Promise.all(jobs);
-  save();
+  await ensureExplain(w);
   if (!$('explain').hidden) renderExplain(w);
 }
 $('exClose').onclick = $('exDone').onclick = () => { $('explain').hidden = true; hush(); };
