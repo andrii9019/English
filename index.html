@@ -87,6 +87,13 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .ex-def{margin:0 0 8px;line-height:1.45}
 .ex-eg{margin:0 0 8px;padding:10px 12px;border-left:3px solid #34e0a8;background:var(--surface);border-radius:0 12px 12px 0;line-height:1.45}
 .ex-eg small{display:block;opacity:.65;margin-top:3px}
+.ex-freq{padding-top:12px;border-top:1px solid var(--line)}
+.freq-row{display:flex;align-items:center;gap:10px}
+.freq-dots{display:flex;gap:5px}
+.freq-dots i{width:12px;height:12px;border-radius:50%;background:rgba(127,127,127,.25)}
+.freq-dots i.on{background:linear-gradient(180deg,#9ff5e2,#1de9b6);box-shadow:0 0 6px rgba(29,233,182,.5)}
+.freq-row b{font-size:.95rem}
+.freq-label{margin:4px 0 0;font-size:.85rem;opacity:.7}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
 .lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
@@ -217,7 +224,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v48</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v49</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1354,11 +1361,31 @@ async function dictLookup(w){
   }
   return netErr ? undefined : null;   // undefined = offline, try again next time
 }
+async function freqLookup(w){
+  let netErr = false;
+  for (const term of w.en.slice(0, 2)){
+    try {
+      const r = await fetch('https://api.datamuse.com/words?md=f&max=1&sp=' + encodeURIComponent(term.toLowerCase()));
+      if (!r.ok) continue;
+      const j = await r.json(), hit = (j || [])[0];
+      if (!hit || hit.word !== term.toLowerCase()) continue;
+      const tag = (hit.tags || []).find(t => t.startsWith('f:'));
+      if (tag) return freqScore(parseFloat(tag.slice(2)));
+    } catch(e){ netErr = true; }
+  }
+  return netErr ? undefined : null;
+}
+// per-million → 1..10 (log scale): ≥1000 → 10, 300 → 9, 100 → 8, 30 → 7, 10 → 6, 3 → 5, 1 → 4, 0.3 → 3, 0.1 → 2
+function freqScore(perMillion){
+  if (!(perMillion > 0)) return 1;
+  return Math.max(1, Math.min(10, Math.round(4 + Math.log10(perMillion) * 2)));
+}
 async function aiExplain(w){
   const L = NATIVE().en, model = await pickChatModel();
   const prompt = `Explain the English word or phrase "${w.en[0]}" (meaning here: "${w.uk}") to a ${L} speaker who is learning English.\n` +
     `Reply with JSON only: {"explanation": "3-4 clear sentences IN ${L.toUpperCase()}: what it means, when it is used, how it differs from similar words", ` +
-    `"examples": [{"en": "a natural English sentence using it", "tr": "its ${L} translation"}, {"en": "...", "tr": "..."}]}`;
+    `"examples": [{"en": "a natural English sentence using it", "tr": "its ${L} translation"}, {"en": "...", "tr": "..."}], ` +
+    `"frequency": an integer 1-10, how common it is in everyday modern English (10 = basic word everyone uses daily, 5 = known and used now and then, 1 = rare or literary)}`;
   const body = { model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 700 };
   if (/^gpt-5|^o\d/.test(model)) body.reasoning_effort = 'minimal';
   const r = await fetch(OA + '/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -1366,7 +1393,20 @@ async function aiExplain(w){
   const j = await r.json();
   const t = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').replace(/```json|```/g, '').trim();
   const d = JSON.parse(t);
-  return { explanation: String(d.explanation || ''), examples: (d.examples || []).filter(e => e && e.en).slice(0, 3) };
+  const f = parseInt(d.frequency, 10);
+  return { explanation: String(d.explanation || ''), examples: (d.examples || []).filter(e => e && e.en).slice(0, 3), freq: f >= 1 && f <= 10 ? f : null };
+}
+function freqHtml(w){
+  const ex = w.ex || {}, ai = ex.ai && ex.ai[NATIVE_CODE];
+  let f = ex.freq, approx = false;
+  if (!f && ai && ai.freq) f = ai.freq;
+  if (!f && ex.freq === null){ f = { b1: 7, b2: 5, mine: 3 }[w.pack || 'mine']; approx = true; }   // phrase not in the frequency list: estimate by level
+  if (!f) return '';
+  const label = f >= 9 ? 'Very common' : f >= 7 ? 'Common' : f >= 5 ? 'Fairly common' : f >= 3 ? 'Less common' : 'Rare';
+  const dots = Array.from({ length: 10 }, (_, i) => `<i class="${i < f ? 'on' : ''}"></i>`).join('');
+  return `<div class="ex-sec ex-freq"><h3>How common in everyday English</h3>
+    <div class="freq-row"><span class="freq-dots" aria-hidden="true">${dots}</span><b>${approx ? '≈' : ''}${f}/10</b></div>
+    <p class="freq-label">${label}${approx ? ' · estimated' : ''}</p></div>`;
 }
 function renderExplain(w){
   const ex = w.ex || {}, dict = ex.dict, ai = ex.ai && ex.ai[NATIVE_CODE];
@@ -1381,18 +1421,20 @@ function renderExplain(w){
       `<span class="ex-pos">${esc(m.pos)}</span>` + m.defs.map(d => { if (d.ex) egs.push(d.ex); return `<p class="ex-def">${esc(d.d)}</p>`; }).join('')).join('') + '</div>';
     if (egs.length && !(ai && ai.examples.length)) html += `<div class="ex-sec"><h3>Examples</h3>${egs.slice(0, 3).map(e => `<p class="ex-eg">${esc(e)}</p>`).join('')}</div>`;
   }
-  if (!html) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
+  html += freqHtml(w);
+  if (!html.replace(freqHtml(w), '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
   if (dict && !ai && !db.settings.oaKey) html += '<p class="ex-note">Tip: with an OpenAI key (Settings → Natural voice) you also get an explanation in your language.</p>';
   $('exBody').innerHTML = html;
 }
 const exInflight = new Map();
 function ensureExplain(w){
   w.ex = w.ex || {};
-  const needDict = w.ex.dict === undefined, needAi = !!db.settings.oaKey && !(w.ex.ai && w.ex.ai[NATIVE_CODE]);
-  if (!needDict && !needAi) return Promise.resolve();
+  const needDict = w.ex.dict === undefined, needAi = !!db.settings.oaKey && !(w.ex.ai && w.ex.ai[NATIVE_CODE]), needFreq = w.ex.freq === undefined;
+  if (!needDict && !needAi && !needFreq) return Promise.resolve();
   if (exInflight.has(w.id)) return exInflight.get(w.id);
   const jobs = [];
   if (needDict) jobs.push(dictLookup(w).then(d => { if (d !== undefined) w.ex.dict = d; }));
+  if (needFreq) jobs.push(freqLookup(w).then(f => { if (f !== undefined) w.ex.freq = f; }));
   if (needAi) jobs.push(aiExplain(w).then(a => { w.ex.ai = { ...(w.ex.ai || {}), [NATIVE_CODE]: a }; }).catch(e => console.warn(e)));
   const job = Promise.all(jobs).then(() => { save(); }).finally(() => exInflight.delete(w.id));
   exInflight.set(w.id, job);
@@ -1414,7 +1456,7 @@ async function openExplain(w){
   $('exSay').onclick = () => { hush(); speak(w.en[0], EN()); };
   $('explain').hidden = false;
   w.ex = w.ex || {};
-  const ready = w.ex.dict !== undefined && (!db.settings.oaKey || (w.ex.ai && w.ex.ai[NATIVE_CODE]));
+  const ready = w.ex.dict !== undefined && w.ex.freq !== undefined && (!db.settings.oaKey || (w.ex.ai && w.ex.ai[NATIVE_CODE]));
   renderExplain(w);
   if (ready) return;
   $('exBody').insertAdjacentHTML('beforeend', '<p class="ex-note" id="exLoading">Loading explanation…</p>');
