@@ -98,6 +98,8 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .cefr-A{color:#7ee0a1}.cefr-B{color:#34e0d0}.cefr-C{color:#c79bff}
 .freq-label{margin:4px 0 0;font-size:.85rem;opacity:.7}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
+.backup-nag{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 10px 10px 14px;margin:0 0 10px;border-radius:16px;border:1px solid rgba(255,196,87,.5);background:rgba(255,196,87,.08);font-size:.88rem}
+.backup-nag .btn{padding:8px 14px;flex:none}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
 .lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
 .lvl:not(.on){opacity:.55}
@@ -227,7 +229,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v51</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v52</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -239,6 +241,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 
   <!-- PRACTICE: start -->
   <section id="view-start">
+    <div class="backup-nag" id="backupNag" hidden><span id="backupNagText"></span><button class="btn primary" id="backupNagBtn">Save now</button></div>
     <div class="dir-switch" id="dirSwitch" role="group" aria-label="Direction"></div>
     <div class="levels" id="levels" role="group" aria-label="Levels"></div>
     <div class="panel">
@@ -289,6 +292,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <h2 id="sumTitle"></h2>
       <p id="sumText" class="muted"></p>
       <ul class="mistakes" id="sumList"></ul>
+      <button class="btn big" id="sumBackupBtn" hidden style="margin-bottom:10px">💾 Save backup file</button>
       <button class="btn primary big" id="againBtn">Home</button>
     </div>
   </section>
@@ -379,14 +383,18 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <p class="small" id="hintsOut" style="margin-bottom:0"></p>
       <div class="setting"><span>Write automatically during sessions</span><select id="autoHints"><option value="1">Yes</option><option value="0">No</option></select></div>
     </details>
-    <details class="panel fold">
-      <summary><span><b>Backup</b><small>Save or restore your words and progress</small></span></summary>
-      <p class="small muted" style="margin:10px 0">Words and progress are stored only on this device.</p>
+    <div class="panel">
+      <h2>Backup</h2>
+      <p class="small muted" style="margin:0 0 10px">Your progress lives only on this phone. Save a backup file now and then, so clearing Chrome or changing phones won't lose it.</p>
+      <p class="small" id="backupInfo" style="margin:0 0 10px"></p>
       <div class="row">
-        <button class="btn" id="exportBtn">Copy backup</button>
-        <button class="btn" id="importBtn">Restore backup</button>
+        <button class="btn primary" id="saveBackupBtn">Save backup file</button>
+        <button class="btn" id="restoreFileBtn">Restore from file</button>
       </div>
-    </details>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+      <p class="small muted" style="margin:10px 0 0">Tip: send the file to yourself in Telegram or save it to Google Drive — then it's safe even if the phone is lost. <a href="#" id="importBtn" class="muted">Restore from old text backup</a></p>
+      <button id="exportBtn" hidden></button>
+    </div>
     <!-- retired voice-answer controls, kept so older code paths stay safe -->
     <div hidden>
       <button id="micTest"></button>
@@ -1734,6 +1742,7 @@ $('sumList').onclick = e => {
 function endSession(){ stopListening(); hush(); releaseAwake(); releaseMic(); session = null; }
 function finishSession(){
   const s = session; endSession();
+  $('sumBackupBtn').hidden = !backupDue();
   $('bar').style.width = '100%';
   const total = Object.keys(s.graded).length;
   $('sumTitle').textContent = s.mistakes.length ? 'Session complete' : 'No mistakes at all';
@@ -1843,7 +1852,7 @@ function renderDir(){
   $('dirSwitch').querySelectorAll('button').forEach(b => b.onclick = () => { setDirection(b.dataset.dir); renderStart(); });
 }
 function renderLevels(){
-  renderDir();
+  renderDir(); renderBackupInfo();
   $('levels').innerHTML = PACK_ORDER.map((p, i) => {
     const ws = db.words.filter(w => (w.pack || 'mine') === p);
     const known = ws.filter(w => status(w) === 'known').length;
@@ -2071,13 +2080,115 @@ $('exportBtn').onclick = async () => {
   try { await navigator.clipboard.writeText(text); toast('Backup copied. Save it in your notes'); }
   catch(e){ prompt('Copy and save this text:', text); }
 };
-$('importBtn').onclick = () => {
+$('importBtn').onclick = (ev) => {
+  if (ev) ev.preventDefault();
   const t = prompt('Paste your saved backup:');
   if (!t) return;
   try { const d = JSON.parse(t); if (!Array.isArray(d.words)) throw 0;
     if (confirm(`Replace current words (${db.words.length}) with the backup (${d.words.length})?`)){ db = { ...d, settings: { ...db.settings, ...(d.settings||{}), oaKey: db.settings.oaKey } }; save(); renderList(); toast('Restored'); } }
   catch(e){ toast('This does not look like a Rehearsal backup'); }
 };
+
+/* ---------- Backup to a file ----------
+   Only progress is saved (the dictionary is built into the app), so the file is small.
+   Every language you study is included. The OpenAI key is never included. */
+const BACKUP_DAYS = 7;
+const PROG_KEYS = ['box', 'seen', 'due', 'weak', 'right', 'wrong'];
+const wKey = w => (w.pack || 'mine') + '|' + w.en.map(e => e.toLowerCase()).join(',');
+function packProgress(d){
+  const out = [];
+  (d.words || []).forEach(w => {
+    const alt = w.alt && w.alt.seen ? PROG_KEYS.map(k => w.alt[k]) : null;
+    const custom = !w.pack || w.pack === 'mine' && !BASE_KEYS.has(wKey(w));
+    if (!w.seen && !alt && !(w.hint && !w.hintAuto) && !custom) return;
+    const e = { k: wKey(w), u: w.uk, s: PROG_KEYS.map(k => w[k]) };
+    if (alt) e.a = alt;
+    if (w.hint && !w.hintAuto) e.h = w.hint;
+    if (custom) { e.p = w.pack || 'mine'; e.e = w.en; }
+    out.push(e);
+  });
+  const settings = { ...(d.settings || {}) }; delete settings.oaKey;
+  return { settings, words: out };
+}
+function applyProgress(d, b){
+  const map = new Map((d.words || []).map(w => [wKey(w), w]));
+  let n = 0, t = Date.now();
+  (b.words || []).forEach(e => {
+    let w = map.get(e.k);
+    if (!w && e.e){ w = { ...makeWord(e.u, e.e.join(', ')), pack: e.p || 'mine', added: t++ }; d.words.push(w); map.set(e.k, w); }
+    if (!w) return;
+    PROG_KEYS.forEach((k, i) => { w[k] = e.s[i]; });
+    if (e.a){ w.alt = {}; PROG_KEYS.forEach((k, i) => { w.alt[k] = e.a[i]; }); }
+    if (e.h){ w.hint = e.h; w.hintAuto = false; }
+    n++;
+  });
+  d.settings = { ...(d.settings || {}), ...(b.settings || {}), oaKey: (d.settings || {}).oaKey };
+  return n;
+}
+const BASE_KEYS = new Set([...BASE.map(r => 'mine|' + r[1].toLowerCase().split(',').map(x => x.trim()).join(',')),
+  ...Object.entries(PACKS).flatMap(([p, rows]) => rows.map(r => p + '|' + r[1].toLowerCase().split(',').map(x => x.trim()).join(',')))]);
+function langKey(lang){ return lang === 'uk' ? 'vidlunnia:v1' : 'rehearsal:' + lang; }
+function saveBackupFile(){
+  save();
+  const langs = {};
+  Object.keys(NATIVES).forEach(lang => {
+    try {
+      const d = lang === NATIVE_CODE ? db : JSON.parse(localStorage.getItem(langKey(lang)) || 'null');
+      if (d && d.words) langs[lang] = packProgress(d);
+    } catch(e){}
+  });
+  const data = { app: 'rehearsal', v: 2, saved: new Date().toISOString(), current: NATIVE_CODE, langs };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rehearsal-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  db.settings.lastBackup = Date.now(); save();
+  try { Object.keys(langs).forEach(l => { if (l !== NATIVE_CODE){ const d = JSON.parse(localStorage.getItem(langKey(l))); d.settings.lastBackup = Date.now(); localStorage.setItem(langKey(l), JSON.stringify(d)); } }); } catch(e){}
+  toast('Backup saved to Downloads');
+  renderBackupInfo();
+}
+async function restoreFromFile(file){
+  let b;
+  try { b = JSON.parse(await file.text()); } catch(e){ toast('Could not read this file'); return; }
+  if (!b || b.app !== 'rehearsal' || !b.langs){ toast('This is not a Rehearsal backup file'); return; }
+  const when = b.saved ? new Date(b.saved).toLocaleDateString() : 'unknown date';
+  const langs = Object.keys(b.langs).map(l => (NATIVES[l] || {}).name || l).join(', ');
+  if (!confirm(`Restore progress from ${when}?\nLanguages: ${langs}\n\nCurrent progress for these languages will be replaced.`)) return;
+  let total = 0;
+  for (const [lang, part] of Object.entries(b.langs)){
+    if (!NATIVES[lang]) continue;
+    if (lang === NATIVE_CODE){ total += applyProgress(db, part); db.settings.lastBackup = Date.now(); save(); continue; }
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(langKey(lang)) || 'null'); } catch(e){}
+    if (!d && lang !== 'uk'){
+      try { d = { words: await buildNativeDb(lang), settings: { ...db.settings, native: lang }, dictVersion: 1 }; } catch(e){ continue; }
+    }
+    if (!d) continue;
+    total += applyProgress(d, part);
+    try { localStorage.setItem(langKey(lang), JSON.stringify(d)); } catch(e){}
+  }
+  toast(`Restored progress for ${total} words`);
+  setTimeout(() => location.reload(), 900);
+}
+function backupAge(){ const t = db.settings.lastBackup; return t ? Math.floor((Date.now() - t) / 864e5) : null; }
+function backupDue(){
+  const seen = db.words.filter(w => w.seen || (w.alt && w.alt.seen)).length;
+  const age = backupAge();
+  return seen >= 15 && (age === null || age >= BACKUP_DAYS);
+}
+function renderBackupInfo(){
+  const age = backupAge();
+  $('backupInfo').textContent = age === null ? 'No backup saved yet.' : age === 0 ? 'Last backup: today ✓' : `Last backup: ${age} day${age === 1 ? '' : 's'} ago`;
+  const due = backupDue();
+  $('backupNag').hidden = !due;
+  if (due) $('backupNagText').textContent = age === null ? '💾 Protect your progress with a backup' : `💾 Last backup: ${age} days ago`;
+}
+$('saveBackupBtn').onclick = $('backupNagBtn').onclick = saveBackupFile;
+$('sumBackupBtn').onclick = () => { saveBackupFile(); $('sumBackupBtn').hidden = true; };
+$('restoreFileBtn').onclick = () => $('restoreFile').click();
+$('restoreFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) restoreFromFile(f); };
 
 /* ---------- First launch: choose your language ---------- */
 function showLangPicker(){
