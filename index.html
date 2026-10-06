@@ -227,7 +227,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v50</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v51</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1347,28 +1347,52 @@ function revDistractors(w, n = 2){
   return out;
 }
 /* ---------- Word explanation card ---------- */
+// fetch with a time limit, so a slow service never leaves the card stuck on "Loading…"
+async function fetchT(url, ms = 7000){
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try { return await fetch(url, { signal: c.signal }); } finally { clearTimeout(t); }
+}
+const stripHtml = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
+// 1) Free Dictionary API  2) Wiktionary as a backup (also covers many phrases and idioms)
 async function dictLookup(w){
-  let netErr = false;
-  for (const term of w.en.slice(0, 3)){
+  let netErr = false, notFound = 0;
+  const terms = w.en.slice(0, 3);
+  for (const term of terms){
     try {
-      const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(term.toLowerCase()));
-      if (!r.ok) continue;
-      const j = await r.json(), out = { word: term, meanings: [] };
-      (j || []).forEach(e => (e.meanings || []).forEach(m => {
-        if (out.meanings.length >= 3) return;
-        const defs = (m.definitions || []).slice(0, 2).map(d => ({ d: d.definition, ex: d.example || '' }));
-        if (defs.length) out.meanings.push({ pos: m.partOfSpeech, defs });
-      }));
-      if (out.meanings.length) return out;
+      const r = await fetchT('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(term.toLowerCase()));
+      if (r.status === 404){ notFound++; }
+      else if (!r.ok) netErr = true;
+      else {
+        const j = await r.json(), out = { word: term, meanings: [] };
+        (j || []).forEach(e => (e.meanings || []).forEach(m => {
+          if (out.meanings.length >= 3) return;
+          const defs = (m.definitions || []).slice(0, 2).map(d => ({ d: d.definition, ex: d.example || '' }));
+          if (defs.length) out.meanings.push({ pos: m.partOfSpeech, defs });
+        }));
+        if (out.meanings.length) return out;
+      }
+    } catch(e){ netErr = true; }
+    try {
+      const r = await fetchT('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(term.replace(/ /g, '_')));
+      if (r.ok){
+        const j = await r.json(), out = { word: term, meanings: [] };
+        (j.en || []).forEach(m => {
+          if (out.meanings.length >= 3) return;
+          const defs = (m.definitions || []).map(d => ({ d: stripHtml(d.definition), ex: stripHtml((d.examples || [])[0] || (d.parsedExamples && d.parsedExamples[0] && d.parsedExamples[0].example) || '') }))
+            .filter(d => d.d).slice(0, 2);
+          if (defs.length) out.meanings.push({ pos: String(m.partOfSpeech || '').toLowerCase(), defs });
+        });
+        if (out.meanings.length) return out;
+      } else if (r.status === 404) notFound++;
     } catch(e){ netErr = true; }
   }
-  return netErr ? undefined : null;   // undefined = offline, try again next time
+  return netErr && !notFound ? undefined : (netErr ? undefined : null);   // undefined = couldn't reach, try again later
 }
 async function freqLookup(w){
   let netErr = false;
   for (const term of w.en.slice(0, 2)){
     try {
-      const r = await fetch('https://api.datamuse.com/words?md=f&max=1&sp=' + encodeURIComponent(term.toLowerCase()));
+      const r = await fetchT('https://api.datamuse.com/words?md=f&max=1&sp=' + encodeURIComponent(term.toLowerCase()));
       if (!r.ok) continue;
       const j = await r.json(), hit = (j || [])[0];
       if (!hit || hit.word !== term.toLowerCase()) continue;
@@ -1441,9 +1465,12 @@ function renderExplain(w){
     if (egs.length && !(ai && ai.examples.length)) html += `<div class="ex-sec"><h3>Examples</h3>${egs.slice(0, 3).map(e => `<p class="ex-eg">${esc(e)}</p>`).join('')}</div>`;
   }
   html += freqHtml(w);
-  if (!html.replace(freqHtml(w), '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
+  if (exInflight.has(w.id) && !dict && !ai) html = '<p class="ex-def muted">Loading explanation…</p>' + freqHtml(w);
+  else if (ex.dict === undefined && !dict && !ai) html = '<p class="ex-def muted">Couldn’t reach the dictionary. Check your internet.</p><button class="btn" id="exRetry" style="width:100%">Try again</button>' + freqHtml(w);
+  else if (!html.replace(freqHtml(w), '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
   if (dict && !ai && !db.settings.oaKey) html += '<p class="ex-note">Tip: with an OpenAI key (Settings → Natural voice) you also get an explanation in your language.</p>';
   $('exBody').innerHTML = html;
+  const rb = $('exRetry'); if (rb) rb.onclick = () => openExplain(w);
 }
 const exInflight = new Map();
 function ensureExplain(w){
@@ -1476,10 +1503,10 @@ async function openExplain(w){
   $('explain').hidden = false;
   w.ex = w.ex || {};
   const ready = w.ex.dict !== undefined && w.ex.freq !== undefined && (!db.settings.oaKey || (w.ex.ai && w.ex.ai[NATIVE_CODE]));
+  if (ready){ renderExplain(w); return; }
+  const job = ensureExplain(w);
   renderExplain(w);
-  if (ready) return;
-  $('exBody').insertAdjacentHTML('beforeend', '<p class="ex-note" id="exLoading">Loading explanation…</p>');
-  await ensureExplain(w);
+  await job;
   if (!$('explain').hidden) renderExplain(w);
 }
 $('exClose').onclick = $('exDone').onclick = () => { $('explain').hidden = true; hush(); };
