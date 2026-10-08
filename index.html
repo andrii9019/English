@@ -97,6 +97,11 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .cefr small{font-size:.55rem;font-weight:700;letter-spacing:.08em;opacity:.75;margin-bottom:2px}
 .cefr-A{color:#7ee0a1}.cefr-B{color:#34e0d0}.cefr-C{color:#c79bff}
 .freq-label{margin:4px 0 0;font-size:.85rem;opacity:.7}
+.ex-edit-btn{display:inline-flex;align-items:center;gap:6px;margin:0 0 4px;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:#34e0a8;font:600 .85rem var(--body);cursor:pointer}
+#exEdit label{display:block;margin:12px 0 4px;font-size:.82rem;opacity:.75}
+#exEdit input,#exEdit textarea{width:100%;box-sizing:border-box}
+#exEdit textarea{resize:vertical;min-height:90px;font:inherit;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:inherit}
+.ex-mine{margin:12px 0 0;padding:12px 14px;border-radius:14px;border:1px dashed #34e0a8;background:rgba(29,233,182,.06);white-space:pre-wrap;line-height:1.45}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
 .backup-nag{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 10px 10px 14px;margin:0 0 10px;border-radius:16px;border:1px solid rgba(255,196,87,.5);background:rgba(255,196,87,.08);font-size:.88rem}
 .backup-nag .btn{padding:8px 14px;flex:none}
@@ -229,7 +234,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v52</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v53</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -423,7 +428,22 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div><h2 id="exWord"></h2><p class="muted" id="exNative"></p></div>
       <button class="say-btn" id="exSay" aria-label="Pronounce"></button>
     </div>
+    <button class="ex-edit-btn" id="exEditBtn">✎ Edit word &amp; my notes</button>
     <div id="exBody"></div>
+    <form id="exEdit" hidden>
+      <label for="edUk">Translation (your language)</label>
+      <input type="text" id="edUk" required autocomplete="off">
+      <label for="edEn">English (several options separated by commas)</label>
+      <input type="text" id="edEn" required autocomplete="off" autocapitalize="off" spellcheck="false">
+      <label for="edHint">Short hint (read aloud before the options)</label>
+      <input type="text" id="edHint" autocomplete="off" placeholder="e.g. temporarily, expecting it back">
+      <label for="edNote">My notes</label>
+      <textarea id="edNote" rows="4" placeholder="Your own explanation, examples, how to remember it…"></textarea>
+      <div class="row" style="margin-top:12px;flex-wrap:nowrap">
+        <button type="button" class="btn" id="edCancel" style="flex:1">Cancel</button>
+        <button type="submit" class="btn primary" id="edSave" style="flex:1">Save</button>
+      </div>
+    </form>
     <button class="btn primary" id="exDone" style="width:100%;margin-top:14px">Got it</button>
   </div>
 </div>
@@ -1461,7 +1481,7 @@ function freqHtml(w){
 }
 function renderExplain(w){
   const ex = w.ex || {}, dict = ex.dict, ai = ex.ai && ex.ai[NATIVE_CODE];
-  let html = '';
+  let html = w.note ? `<div class="ex-sec"><h3>My notes</h3><div class="ex-mine">${esc(w.note)}</div></div>` : '';
   if (ai && ai.explanation){
     html += `<div class="ex-sec"><h3>Meaning</h3><p class="ex-def">${esc(ai.explanation)}</p></div>`;
     if (ai.examples.length) html += `<div class="ex-sec"><h3>Examples</h3>${ai.examples.map(e => `<p class="ex-eg">${esc(e.en)}${e.tr ? `<small>${esc(e.tr)}</small>` : ''}</p>`).join('')}</div>`;
@@ -1475,7 +1495,7 @@ function renderExplain(w){
   html += freqHtml(w);
   if (exInflight.has(w.id) && !dict && !ai) html = '<p class="ex-def muted">Loading explanation…</p>' + freqHtml(w);
   else if (ex.dict === undefined && !dict && !ai) html = '<p class="ex-def muted">Couldn’t reach the dictionary. Check your internet.</p><button class="btn" id="exRetry" style="width:100%">Try again</button>' + freqHtml(w);
-  else if (!html.replace(freqHtml(w), '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
+  else if (!html.replace(freqHtml(w), '').replace(/<div class="ex-sec"><h3>My notes[\s\S]*?<\/div><\/div>/, '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
   if (dict && !ai && !db.settings.oaKey) html += '<p class="ex-note">Tip: with an OpenAI key (Settings → Natural voice) you also get an explanation in your language.</p>';
   $('exBody').innerHTML = html;
   const rb = $('exRetry'); if (rb) rb.onclick = () => openExplain(w);
@@ -1503,7 +1523,7 @@ function prefetchExplain(){
   }
 }
 async function openExplain(w){
-  hush();
+  hush(); exWordRef = w; setExEditing(false);
   $('exWord').textContent = w.en.join(', ');
   $('exNative').textContent = w.uk + (w.hint ? ' · ' + w.hint : '');
   $('exSay').innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" fill-opacity=".18"/><path d="M15.5 9a4 4 0 0 1 0 6M18.2 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
@@ -1517,6 +1537,40 @@ async function openExplain(w){
   await job;
   if (!$('explain').hidden) renderExplain(w);
 }
+let exWordRef = null;
+function setExEditing(on){
+  $('exEdit').hidden = !on; $('exBody').hidden = on; $('exDone').hidden = on; $('exEditBtn').hidden = on;
+}
+function openEditor(w){
+  exWordRef = w;
+  $('edUk').value = w.uk; $('edEn').value = w.en.join(', ');
+  $('edHint').value = w.hint || ''; $('edNote').value = w.note || '';
+  setExEditing(true);
+  setTimeout(() => $('edNote').focus(), 50);
+}
+$('exEditBtn').onclick = () => { if (exWordRef) openEditor(exWordRef); };
+$('edCancel').onclick = () => { if (exWordRef) { setExEditing(false); renderExplain(exWordRef); } };
+$('exEdit').onsubmit = e => {
+  e.preventDefault();
+  const w = exWordRef; if (!w) return;
+  const uk = $('edUk').value.trim(), en = $('edEn').value.split(',').map(x => x.trim()).filter(Boolean);
+  if (!uk || !en.length){ toast('Translation and English can’t be empty'); return; }
+  if (!w.origKey) w.origKey = wKey(w);
+  const enChanged = en.join(',').toLowerCase() !== w.en.join(',').toLowerCase();
+  w.uk = uk; w.en = en;
+  const h = $('edHint').value.trim();
+  if (h !== (w.hint || '')){ w.hint = h; w.hintAuto = false; }
+  w.note = $('edNote').value.trim();
+  w.edited = true;
+  if (enChanged) delete w.ex;
+  save();
+  $('exWord').textContent = w.en.join(', ');
+  $('exNative').textContent = w.uk + (w.hint ? ' · ' + w.hint : '');
+  setExEditing(false);
+  if (enChanged) openExplain(w); else renderExplain(w);
+  if (!$('view-words').hidden) renderList();
+  toast('Saved');
+};
 $('exClose').onclick = $('exDone').onclick = () => { $('explain').hidden = true; hush(); };
 $('explain').onclick = e => { if (e.target === $('explain')){ $('explain').hidden = true; hush(); } };
 function pickRound(step){
@@ -1999,7 +2053,7 @@ function renderList(){
 }
 $('list').onclick = e => {
   const ed = e.target.dataset.edit;
-  if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ const h = prompt('Short explanation for “' + w.uk + '” (' + w.en[0] + '):', w.hint || ''); if (h !== null){ w.hint = h.trim(); w.hintAuto = false; save(); renderList(); } } return; }
+  if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ openExplain(w); openEditor(w); } return; }
   const del = e.target.dataset.del, rs = e.target.dataset.reset;
   if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Delete “${w.uk}”?`)){ db.words = db.words.filter(x=>x.id!==del); save(); renderList(); } }
   if (rs){ const w = db.words.find(x=>x.id===rs); if (w){ Object.assign(w,{box:0,seen:false,due:0,weak:false}); save(); renderList(); toast('The word is new again'); } }
@@ -2099,9 +2153,11 @@ function packProgress(d){
   const out = [];
   (d.words || []).forEach(w => {
     const alt = w.alt && w.alt.seen ? PROG_KEYS.map(k => w.alt[k]) : null;
-    const custom = !w.pack || w.pack === 'mine' && !BASE_KEYS.has(wKey(w));
-    if (!w.seen && !alt && !(w.hint && !w.hintAuto) && !custom) return;
-    const e = { k: wKey(w), u: w.uk, s: PROG_KEYS.map(k => w[k]) };
+    const custom = !w.pack || w.pack === 'mine' && !BASE_KEYS.has(w.origKey || wKey(w));
+    if (!w.seen && !alt && !(w.hint && !w.hintAuto) && !custom && !w.note && !w.edited) return;
+    const e = { k: w.origKey || wKey(w), u: w.uk, s: PROG_KEYS.map(k => w[k]) };
+    if (w.note) e.n = w.note;
+    if (w.edited){ e.ed = 1; e.e = w.en; }
     if (alt) e.a = alt;
     if (w.hint && !w.hintAuto) e.h = w.hint;
     if (custom) { e.p = w.pack || 'mine'; e.e = w.en; }
@@ -2115,11 +2171,13 @@ function applyProgress(d, b){
   let n = 0, t = Date.now();
   (b.words || []).forEach(e => {
     let w = map.get(e.k);
-    if (!w && e.e){ w = { ...makeWord(e.u, e.e.join(', ')), pack: e.p || 'mine', added: t++ }; d.words.push(w); map.set(e.k, w); }
+    if (!w && e.e && !e.ed){ w = { ...makeWord(e.u, e.e.join(', ')), pack: e.p || 'mine', added: t++ }; d.words.push(w); map.set(e.k, w); }
     if (!w) return;
     PROG_KEYS.forEach((k, i) => { w[k] = e.s[i]; });
     if (e.a){ w.alt = {}; PROG_KEYS.forEach((k, i) => { w.alt[k] = e.a[i]; }); }
     if (e.h){ w.hint = e.h; w.hintAuto = false; }
+    if (e.n) w.note = e.n;
+    if (e.ed && e.e){ w.origKey = e.k; w.uk = e.u; w.en = e.e.slice(); w.edited = true; }
     n++;
   });
   d.settings = { ...(d.settings || {}), ...(b.settings || {}), oaKey: (d.settings || {}).oaKey };
