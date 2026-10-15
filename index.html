@@ -97,6 +97,8 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .cefr small{font-size:.55rem;font-weight:700;letter-spacing:.08em;opacity:.75;margin-bottom:2px}
 .cefr-A{color:#7ee0a1}.cefr-B{color:#34e0d0}.cefr-C{color:#c79bff}
 .freq-label{margin:4px 0 0;font-size:.85rem;opacity:.7}
+.ex-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
+.ex-del-btn{color:#ff8a8a!important;border-color:rgba(255,107,107,.45)!important}
 .ex-edit-btn{display:inline-flex;align-items:center;gap:6px;margin:0 0 4px;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:#34e0a8;font:600 .85rem var(--body);cursor:pointer}
 #exEdit label{display:block;margin:12px 0 4px;font-size:.82rem;opacity:.75}
 #exEdit input,#exEdit textarea{width:100%;box-sizing:border-box}
@@ -234,7 +236,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v53</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v54</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -428,7 +430,10 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
       <div><h2 id="exWord"></h2><p class="muted" id="exNative"></p></div>
       <button class="say-btn" id="exSay" aria-label="Pronounce"></button>
     </div>
-    <button class="ex-edit-btn" id="exEditBtn">✎ Edit word &amp; my notes</button>
+    <div class="ex-actions" id="exActions">
+      <button class="ex-edit-btn" id="exEditBtn">✎ Edit word &amp; my notes</button>
+      <button class="ex-edit-btn ex-del-btn" id="exDelBtn" aria-label="Delete this word">🗑 Delete</button>
+    </div>
     <div id="exBody"></div>
     <form id="exEdit" hidden>
       <label for="edUk">Translation (your language)</label>
@@ -638,7 +643,7 @@ function load(){
       }
       if ((d.packVersion || 0) < PACK_VERSION){ d.words = mergePacks(d.words); d.packVersion = PACK_VERSION; }
       if ((d.fixVersion || 0) < FIX_VERSION){ d.words = applyFixes(d.words); d.fixVersion = FIX_VERSION; }
-      return d;
+      return dropDeleted(d);
     }
   }catch(e){}
   const words = baseWords(); words.forEach(w => w.pack = 'mine');
@@ -1537,9 +1542,21 @@ async function openExplain(w){
   await job;
   if (!$('explain').hidden) renderExplain(w);
 }
+function deletedSet(d){ return new Set((d.settings && d.settings.deletedKeys) || []); }
+function dropDeleted(d){ const del = deletedSet(d); if (del.size) d.words = d.words.filter(w => !del.has(w.origKey || wKey(w))); return d; }
+function removeWord(w){
+  const k = w.origKey || wKey(w);
+  db.settings.deletedKeys = [...new Set([...(db.settings.deletedKeys || []), k])];
+  db.words = db.words.filter(x => x.id !== w.id);
+  if (session){
+    session.queue = session.queue.filter((q, i) => i <= session.i || q.id !== w.id);
+    session.mistakes = session.mistakes.filter(id => id !== w.id);
+  }
+  save();
+}
 let exWordRef = null;
 function setExEditing(on){
-  $('exEdit').hidden = !on; $('exBody').hidden = on; $('exDone').hidden = on; $('exEditBtn').hidden = on;
+  $('exEdit').hidden = !on; $('exBody').hidden = on; $('exDone').hidden = on; $('exActions').hidden = on;
 }
 function openEditor(w){
   exWordRef = w;
@@ -1549,6 +1566,16 @@ function openEditor(w){
   setTimeout(() => $('edNote').focus(), 50);
 }
 $('exEditBtn').onclick = () => { if (exWordRef) openEditor(exWordRef); };
+$('exDelBtn').onclick = () => {
+  const w = exWordRef; if (!w) return;
+  if (!confirm(`Delete “${w.en.join(', ')} — ${w.uk}” for good?\nIt won't appear in practice or in your word list again.`)) return;
+  const inSession = session && current().w === w;
+  removeWord(w);
+  $('explain').hidden = true; hush();
+  toast('Word deleted');
+  if (inSession) advance();
+  else { if (!$('view-words').hidden) renderList(); if (!$('view-start').hidden) renderStart(); }
+};
 $('edCancel').onclick = () => { if (exWordRef) { setExEditing(false); renderExplain(exWordRef); } };
 $('exEdit').onsubmit = e => {
   e.preventDefault();
@@ -2055,7 +2082,7 @@ $('list').onclick = e => {
   const ed = e.target.dataset.edit;
   if (ed){ const w = db.words.find(x=>x.id===ed); if (w){ openExplain(w); openEditor(w); } return; }
   const del = e.target.dataset.del, rs = e.target.dataset.reset;
-  if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Delete “${w.uk}”?`)){ db.words = db.words.filter(x=>x.id!==del); save(); renderList(); } }
+  if (del){ const w = db.words.find(x=>x.id===del); if (w && confirm(`Delete “${w.uk}” for good?`)){ removeWord(w); renderList(); toast('Word deleted'); } }
   if (rs){ const w = db.words.find(x=>x.id===rs); if (w){ Object.assign(w,{box:0,seen:false,due:0,weak:false}); save(); renderList(); toast('The word is new again'); } }
 };
 $('search').oninput = renderList;
@@ -2148,7 +2175,7 @@ $('importBtn').onclick = (ev) => {
    Every language you study is included. The OpenAI key is never included. */
 const BACKUP_DAYS = 7;
 const PROG_KEYS = ['box', 'seen', 'due', 'weak', 'right', 'wrong'];
-const wKey = w => (w.pack || 'mine') + '|' + w.en.map(e => e.toLowerCase()).join(',');
+function wKey(w){ return (w.pack || 'mine') + '|' + w.en.map(e => e.toLowerCase()).join(','); }   // hoisted: used while loading
 function packProgress(d){
   const out = [];
   (d.words || []).forEach(w => {
@@ -2181,6 +2208,7 @@ function applyProgress(d, b){
     n++;
   });
   d.settings = { ...(d.settings || {}), ...(b.settings || {}), oaKey: (d.settings || {}).oaKey };
+  dropDeleted(d);
   return n;
 }
 const BASE_KEYS = new Set([...BASE.map(r => 'mine|' + r[1].toLowerCase().split(',').map(x => x.trim()).join(',')),
