@@ -107,6 +107,7 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
 .backup-nag{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 10px 10px 14px;margin:0 0 10px;border-radius:16px;border:1px solid rgba(255,196,87,.5);background:rgba(255,196,87,.08);font-size:.88rem}
 .backup-nag .btn{padding:8px 14px;flex:none}
+.fb-big{display:block;font-size:1.6rem;font-weight:700;margin-top:4px}
 .ans-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;margin:0 0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
 .ans-switch button{font:600 .85rem var(--body);color:inherit;background:none;border:0;border-radius:999px;padding:8px 6px;cursor:pointer;opacity:.6;display:flex;align-items:center;justify-content:center;gap:6px}
 .ans-switch button.on{opacity:1;color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset;background:rgba(29,233,182,.08)}
@@ -239,7 +240,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v57</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v58</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1282,14 +1283,20 @@ async function listenLoop(step){
   if (!SR && !oaOn('oaEars')){ setStatus('This browser cannot recognise speech. Type the translation'); $('typedForm').classList.add('show'); return; }
   const { w } = current();
   let silent = 0, reprompts = 0, deaf = 0, choiceOffered = false;
+  if (session.rivalsFor !== w.id){ session.rivals = hardDistractors(w); session.rivalsFor = w.id; }
   listenHook = (t, x) => {
     if (!mine()) return;
+    if (t === 'interim' && x && x !== '…' && (isCorrect([x], w) || soundsRight([x], w, session.rivals))){
+      stopListening();
+      handleAnswer([w.en[0]], x);
+      return;
+    }
     if (t === 'audio') setStatus((oaOn('oaEars') ? '🎤 Listening (OpenAI)… ' : '🎤 Listening (phone)… ') + 'speak now');
     if (t === 'interim') setStatus('Hearing: “' + x + '”');
   };
   while (mine()){
     setStatus(session.tapMode ? 'Listening… speak now' : 'Turning on the microphone…');
-    await wait(session.tapMode ? 0 : 500); // let the speech engine release audio first
+    await wait(session.tapMode ? 0 : 250); // let the speech engine release audio first
     if (!mine()) return;
     let heard;
     try { heard = await listen(); deaf = 0; }
@@ -1797,7 +1804,8 @@ async function handleAnswer(heard, shown){
   fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
   if (pickMode() && !ok && shown) heard = [shown];
   fb.innerHTML = `<strong>${syn ? 'Also correct' : ok ? 'Correct' : (heard ? 'Not quite' : 'Answer')}</strong>` +
-    `<span>${esc(w.en.join(', '))}</span>` +
+    `<span class="${ok && voiceOn() ? 'fb-big' : ''}">${esc(w.en.join(', '))}</span>` +
+    (ok && voiceOn() && shown && norm(shown) !== norm(w.en[0]) ? `<div class="small muted">Heard: “${esc(shown)}”</div>` : '') +
     (shown && !ok && !pickMode() ? `<div class="small muted">Heard: “${esc(shown)}”</div><button class="btn" id="overBtn" style="margin-top:8px">I said it right</button>` : '');
   const ob = $('overBtn');
   if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Counted</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Counted as correct'); } };
@@ -1824,7 +1832,11 @@ async function handleAnswer(heard, shown){
       await (isRev() ? speak(speakable(w.uk), NL()) : speak(w.en[0], EN()));
       return;
     }
-    await wait(450);
+    if (voiceOn()){
+      let skip = false; const go = () => { skip = true; };
+      fb.addEventListener('click', go, { once: true }); $('word').addEventListener('click', go, { once: true });
+      for (let t = 0; t < 2200 && !skip && alive(step); t += 100) await wait(100);
+    } else await wait(450);
     if (alive(step)) advance();
     return;
   }
