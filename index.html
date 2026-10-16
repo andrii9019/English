@@ -107,6 +107,9 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
 .backup-nag{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 10px 10px 14px;margin:0 0 10px;border-radius:16px;border:1px solid rgba(255,196,87,.5);background:rgba(255,196,87,.08);font-size:.88rem}
 .backup-nag .btn{padding:8px 14px;flex:none}
+.ans-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;margin:0 0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.ans-switch button{font:600 .85rem var(--body);color:inherit;background:none;border:0;border-radius:999px;padding:8px 6px;cursor:pointer;opacity:.6;display:flex;align-items:center;justify-content:center;gap:6px}
+.ans-switch button.on{opacity:1;color:#34e0a8;box-shadow:0 0 0 1px #34e0a8 inset;background:rgba(29,233,182,.08)}
 .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
 .lvl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 12px 11px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s;font:inherit}
 .lvl:not(.on){opacity:.55}
@@ -236,7 +239,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v54</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v55</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -250,6 +253,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
   <section id="view-start">
     <div class="backup-nag" id="backupNag" hidden><span id="backupNagText"></span><button class="btn primary" id="backupNagBtn">Save now</button></div>
     <div class="dir-switch" id="dirSwitch" role="group" aria-label="Direction"></div>
+    <div class="ans-switch" id="ansSwitch" role="group" aria-label="How to answer"></div>
     <div class="levels" id="levels" role="group" aria-label="Levels"></div>
     <div class="panel">
       <div class="stats" id="stats"></div>
@@ -1127,7 +1131,7 @@ async function startSession(focus){
     if (!session || session.step !== step0) return;
     ensureHints(queue.slice(30).map(q => q.id));   // the rest in the background
   }
-  if (pickMode()){ setStatus(''); return presentItem(); }
+  setStatus(''); if (true) return presentItem();
   const intro = greeting() + ' ' + (fresh.length ? 'I say a word, you say it in English. Let us go!' : 'Review time. Let us go!');
   setStatus(intro);
   const step = session.step;
@@ -1203,7 +1207,7 @@ async function sayWord(w, prefix = ''){
 async function presentItem(){
   if (!session) return;
   if (session.i >= session.queue.length) return finishSession();
-  const step = ++session.step; session.locked = false; session.paused = false;
+  const step = ++session.step; session.locked = false; session.paused = false; session.tapNow = false;
   const { it, w } = current();
   if (!w){ session.i++; return presentItem(); }
   $('bar').style.width = (session.i / session.queue.length * 100) + '%';
@@ -1221,6 +1225,7 @@ async function presentItem(){
   if (lead) await speak(lead, EN());
   if (!alive(step)) return;
   await sayWord(w);
+  prefetchExplain();
   const nx = session.queue[session.i + 1] && db.words.find(x => x.id === session.queue[session.i + 1].id);
   for (let k = 1; k <= 3; k++){ const q = session.queue[session.i + k]; if (q) warmWord(db.words.find(x => x.id === q.id)); }
   if (!alive(step)) return;
@@ -1285,11 +1290,14 @@ async function listenLoop(step){
     }
     if (cmd === 'stop'){ pauseSession('Paused. Tap the microphone to continue', true); return; }
     if (cmd === 'dunno') return handleAnswer(null, '');
-    if (db.settings.choices !== false && !choiceOffered){
+    if (!choiceOffered){
       choiceOffered = true;
-      const chosen = await askChoice(w, heard, mine);
-      if (!mine() || chosen == null) return;
-      return handleAnswer([chosen], chosen);
+      stopListening();
+      session.tapNow = true;
+      $('mic').hidden = true;
+      pickRound(step);
+      setStatus('Heard “' + heard[0] + '”. Tap the right one:');
+      return;
     }
     return handleAnswer(heard, heard[0]);
   }
@@ -1297,7 +1305,9 @@ async function listenLoop(step){
 
 /* ---------- Multiple choice when the recogniser is unsure ---------- */
 /* ---------- Pick mode: say the word, show 3 look-alike options ---------- */
-const pickMode = () => true;   // the app reads the word, you choose one of 3 options
+const voiceOn = () => db.settings.answer === 'voice' && !isRev();
+// tap mode, reverse direction, or the 3 options shown after an unclear voice answer
+const pickMode = () => !voiceOn() || !!(session && session.tapNow);
 function lev(a, b){
   if (a === b) return 0; const m = a.length, n = b.length; if (!m || !n) return m || n;
   let prev = Array.from({ length: n + 1 }, (_, j) => j);
@@ -1750,12 +1760,16 @@ async function handleAnswer(heard, shown){
   if (ob) ob.onclick = () => { if (overrule(session, w)){ fb.className = 'feedback ok'; fb.innerHTML = '<strong>Counted</strong><span>' + esc(w.en.join(', ')) + '</span>'; toast('Counted as correct'); } };
   $('dunnoBtn').hidden = true;
 
-  if (pickMode()){
+  if (true){
     setStatus('');
     $('choices').querySelectorAll('.choice').forEach(c => { c.disabled = true; if (c.dataset.right === '1') c.classList.add('right'); });
     session.streak = ok ? (session.streak || 0) + 1 : 0;
     if (!ok){
       const right = $('choices').querySelector('.choice[data-right="1"]');
+      if (!right){
+        $('choices').insertAdjacentHTML('beforeend', '<button class="btn" id="explainBtn">📖 Meaning &amp; examples</button>');
+        $('explainBtn').onclick = () => openExplain(w);
+      }
       if (right){
         right.disabled = false; right.classList.add('explainable');
         right.insertAdjacentHTML('beforeend', '<span class="explain-tag">tap to learn ›</span>');
@@ -1763,7 +1777,7 @@ async function handleAnswer(heard, shown){
       }
       $('choices').insertAdjacentHTML('beforeend', '<button class="btn primary next-btn" id="nextBtn">Next →</button>');
       $('nextBtn').onclick = () => { if (alive(step)) advance(); };
-      setStatus('Tap the correct word to see its meaning and examples');
+      setStatus(right ? 'Tap the correct word to see its meaning and examples' : '');
       await (isRev() ? speak(speakable(w.uk), NL()) : speak(w.en[0], EN()));
       return;
     }
@@ -1926,7 +1940,16 @@ $('shuffleBtn').onclick = () => {
   db.settings.shuffle = !db.settings.shuffle; save(); renderShuffle();
   toast(db.settings.shuffle ? 'Levels mixed: L1, L2, L3, L1…' : 'Levels in order: L1 first, then L2, then L3');
 };
+function renderAnswerMode(){
+  const v = db.settings.answer === 'voice';
+  $('ansSwitch').innerHTML = `<button data-ans="tap" class="${v ? '' : 'on'}" aria-pressed="${!v}">👆 Tap 3 options</button><button data-ans="voice" class="${v ? 'on' : ''}" aria-pressed="${v}">🎤 Answer by voice</button>`;
+  $('ansSwitch').querySelectorAll('button').forEach(b => b.onclick = () => {
+    db.settings.answer = b.dataset.ans; save(); renderAnswerMode();
+    if (b.dataset.ans === 'voice') toast(isRev() ? 'Voice answers work for ' + NATIVE().short + ' → EN. In EN → ' + NATIVE().short + ' you tap.' : 'Say the English word after you hear it');
+  });
+}
 function renderDir(){
+  renderAnswerMode();
   renderShuffle();
   const n = NATIVE().short;
   $('dirSwitch').innerHTML = `<button data-dir="fwd" class="${isRev() ? '' : 'on'}" aria-pressed="${!isRev()}">${esc(n)} → EN</button><button data-dir="rev" class="${isRev() ? 'on' : ''}" aria-pressed="${isRev()}">EN → ${esc(n)}</button>`;
