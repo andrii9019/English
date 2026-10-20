@@ -104,6 +104,10 @@ details.fold[open]>summary::after{transform:rotate(90deg)}
 #exEdit input,#exEdit textarea{width:100%;box-sizing:border-box}
 #exEdit textarea{resize:vertical;min-height:90px;font:inherit;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:inherit}
 .ex-mine{margin:12px 0 0;padding:12px 14px;border-radius:14px;border:1px dashed #34e0a8;background:rgba(29,233,182,.06);white-space:pre-wrap;line-height:1.45}
+.syn-row{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;line-height:1.4}
+.syn-row span{flex:1;opacity:.85}
+.syn-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.syn-chip{flex:none;padding:6px 12px;border-radius:999px;border:1px solid rgba(29,233,182,.45);background:rgba(29,233,182,.08);color:#9ff5e2;font:600 .95rem var(--body);cursor:pointer}
 .ex-note{font-size:.8rem;opacity:.6;margin:12px 0 0}
 .backup-nag{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 10px 10px 14px;margin:0 0 10px;border-radius:16px;border:1px solid rgba(255,196,87,.5);background:rgba(255,196,87,.08);font-size:.88rem}
 .backup-nag .btn{padding:8px 14px;flex:none}
@@ -240,7 +244,7 @@ details summary{cursor:pointer;font-weight:600;margin:6px 0}
 <div class="wrap">
   <header>
     <div class="brand-row">
-      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v59</span></h1>
+      <h1 class="brand"><img class="brand-icon" src="logo-96.png?v=2" alt="" height="30"><img class="brand-word" src="wordmark.png?v=2" alt="Rehearsal" height="22"><span class="muted" style="font-family:var(--body);font-weight:600;font-size:.75rem">v60</span></h1>
       <button class="lang-chip" id="langChip" aria-label="Change your language"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg><span id="langChipText"></span></button>
     </div>
     <nav class="tabs" role="tablist">
@@ -1487,6 +1491,14 @@ async function dictLookup(w){
   }
   return netErr && !notFound ? undefined : (netErr ? undefined : null);   // undefined = couldn't reach, try again later
 }
+async function synLookup(w){
+  try {
+    const r = await fetchT('https://api.datamuse.com/words?max=8&rel_syn=' + encodeURIComponent(w.en[0].toLowerCase()));
+    if (!r.ok) return undefined;
+    const j = await r.json();
+    return (j || []).map(x => x.word).filter(x => x && !w.en.map(e => e.toLowerCase()).includes(x)).slice(0, 6);
+  } catch(e){ return undefined; }
+}
 async function freqLookup(w){
   let netErr = false;
   for (const term of w.en.slice(0, 2)){
@@ -1515,9 +1527,10 @@ async function aiExplain(w){
     `Reply with JSON only: {"explanation": "3-4 clear sentences IN ${L.toUpperCase()}: what it means, when it is used, how it differs from similar words", ` +
     `"hint": "a clue IN ${L.toUpperCase()}, 6-12 words, built from the explanation, that makes clear exactly which English word is meant and fits it better than the similar words; do NOT write the English word, any part of it or its first letter, and do not just repeat the translation", ` +
     `"examples": [{"en": "a natural English sentence using it", "tr": "its ${L} translation"}, {"en": "...", "tr": "..."}], ` +
+    `"synonyms": [{"en": "a real, common English synonym or close word", "note": "IN ${L.toUpperCase()}, 4-10 words: how it differs or when to use it instead"}] (3-5 items, most useful first), ` +
     `"cefr": the CEFR level of this word in this meaning, one of A1 A2 B1 B2 C1 C2, ` +
     `"frequency": an integer 1-10, how common it is in everyday modern English (10 = basic word everyone uses daily, 5 = known and used now and then, 1 = rare or literary)}`;
-  const body = { model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 700 };
+  const body = { model, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 900 };
   if (/^gpt-5|^o\d/.test(model)) body.reasoning_effort = 'minimal';
   const r = await fetch(OA + '/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + db.settings.oaKey, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1528,7 +1541,9 @@ async function aiExplain(w){
   const cefr = /^(A1|A2|B1|B2|C1|C2)$/.test(String(d.cefr || '').toUpperCase()) ? String(d.cefr).toUpperCase() : null;
   let hint = String(d.hint || '').trim().replace(/^["«]|["»]$/g, '').replace(/\.$/, '');
   if (w.en.some(e => hint.toLowerCase().includes(e.toLowerCase()))) hint = '';
-  return { hint, explanation: String(d.explanation || ''), examples: (d.examples || []).filter(e => e && e.en).slice(0, 3), freq: f >= 1 && f <= 10 ? f : null, cefr };
+  const syn = (Array.isArray(d.synonyms) ? d.synonyms : []).filter(x => x && x.en && !w.en.map(e => e.toLowerCase()).includes(String(x.en).toLowerCase()))
+    .slice(0, 5).map(x => ({ en: String(x.en), note: String(x.note || '') }));
+  return { hint, syn, explanation: String(d.explanation || ''), examples: (d.examples || []).filter(e => e && e.en).slice(0, 3), freq: f >= 1 && f <= 10 ? f : null, cefr };
 }
 const CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const CEFR_NAME = { A1: 'beginner', A2: 'elementary', B1: 'intermediate', B2: 'upper-intermediate', C1: 'advanced', C2: 'proficient' };
@@ -1562,7 +1577,10 @@ function renderExplain(w){
   if (ai && ai.explanation){
     html += `<div class="ex-sec"><h3>Meaning</h3><p class="ex-def">${esc(ai.explanation)}</p></div>`;
     if (ai.examples.length) html += `<div class="ex-sec"><h3>Examples</h3>${ai.examples.map(e => `<p class="ex-eg">${esc(e.en)}${e.tr ? `<small>${esc(e.tr)}</small>` : ''}</p>`).join('')}</div>`;
+    if (ai.syn && ai.syn.length) html += `<div class="ex-sec"><h3>Synonyms</h3>${ai.syn.map(x => `<div class="syn-row"><button class="syn-chip" data-say="${esc(x.en)}">🔊 ${esc(x.en)}</button><span>${esc(x.note)}</span></div>`).join('')}</div>`;
   }
+  if (!(ai && ai.syn && ai.syn.length) && ex.syn && ex.syn.length)
+    html += `<div class="ex-sec"><h3>Synonyms</h3><div class="syn-wrap">${ex.syn.map(x => `<button class="syn-chip" data-say="${esc(x)}">🔊 ${esc(x)}</button>`).join('')}</div></div>`;
   if (dict){
     const egs = [];
     html += `<div class="ex-sec"><h3>${ai ? 'Dictionary' : 'Meaning'}</h3>` + dict.meanings.map(m =>
@@ -1575,6 +1593,7 @@ function renderExplain(w){
   else if (!html.replace(freqHtml(w), '').replace(/<div class="ex-sec"><h3>My notes[\s\S]*?<\/div><\/div>/, '')) html = '<p class="ex-def muted">No dictionary entry for this word or phrase.' + (db.settings.oaKey ? '' : ' Add an OpenAI key in Settings to get explanations in your language.') + '</p>';
   if (dict && !ai && !db.settings.oaKey) html += '<p class="ex-note">Tip: with an OpenAI key (Settings → Natural voice) you also get an explanation in your language.</p>';
   $('exBody').innerHTML = html;
+  $('exBody').querySelectorAll('.syn-chip').forEach(b => b.onclick = () => { hush(); speak(b.dataset.say, EN()); });
   const rb = $('exRetry'); if (rb) rb.onclick = () => openExplain(w);
 }
 const exInflight = new Map();
@@ -1589,12 +1608,15 @@ function applyExHint(w){
 }
 function ensureExplain(w){
   w.ex = w.ex || {};
-  const needDict = w.ex.dict === undefined, needAi = !!db.settings.oaKey && !(w.ex.ai && w.ex.ai[NATIVE_CODE]), needFreq = w.ex.freq === undefined;
-  if (!needDict && !needAi && !needFreq) return Promise.resolve();
+  const myAi = w.ex.ai && w.ex.ai[NATIVE_CODE];
+  const needDict = w.ex.dict === undefined, needAi = !!db.settings.oaKey && !(myAi && myAi.syn), needFreq = w.ex.freq === undefined;
+  const needSyn = !db.settings.oaKey && w.ex.syn === undefined;
+  if (!needDict && !needAi && !needFreq && !needSyn) return Promise.resolve();
   if (exInflight.has(w.id)) return exInflight.get(w.id);
   const jobs = [];
   if (needDict) jobs.push(dictLookup(w).then(d => { if (d !== undefined) w.ex.dict = d; }));
   if (needFreq) jobs.push(freqLookup(w).then(f => { if (f !== undefined) w.ex.freq = f; }));
+  if (needSyn) jobs.push(synLookup(w).then(x => { if (x !== undefined) w.ex.syn = x; }));
   if (needAi) jobs.push(aiExplain(w).then(a => { w.ex.ai = { ...(w.ex.ai || {}), [NATIVE_CODE]: a }; applyExHint(w); }).catch(e => console.warn(e)));
   const job = Promise.all(jobs).then(() => { save(); }).finally(() => exInflight.delete(w.id));
   exInflight.set(w.id, job);
@@ -1616,7 +1638,8 @@ async function openExplain(w){
   $('exSay').onclick = () => { hush(); speak(w.en[0], EN()); };
   $('explain').hidden = false;
   w.ex = w.ex || {};
-  const ready = w.ex.dict !== undefined && w.ex.freq !== undefined && (!db.settings.oaKey || (w.ex.ai && w.ex.ai[NATIVE_CODE]));
+  const myAi = w.ex.ai && w.ex.ai[NATIVE_CODE];
+  const ready = w.ex.dict !== undefined && w.ex.freq !== undefined && (db.settings.oaKey ? !!(myAi && myAi.syn) : w.ex.syn !== undefined);
   if (ready){ renderExplain(w); return; }
   const job = ensureExplain(w);
   renderExplain(w);
